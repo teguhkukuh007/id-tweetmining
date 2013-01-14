@@ -10,7 +10,6 @@ import java.util.Comparator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import edu.upi.cs.tweetmining.DocKMeans.TermStatComparable;
 
 public class AggloClustering {
 	
@@ -99,12 +98,12 @@ public class AggloClustering {
         }
         //fs: tweet sudah masuk ke array
         
-        ArrayList<ClusterKMeans> alCluster = new ArrayList<ClusterKMeans>();  //kumpulan cluster
+        ArrayList<ClusterAgglo> alCluster = new ArrayList<ClusterAgglo>();  //kumpulan cluster
         
         //insialisasi cluster, satu cluster satu tweet
         DocKMeans t;
 		for (int i=0;i<alTweet.size();i++) {
-			ClusterKMeans c = new ClusterKMeans(i);
+			ClusterAgglo c = new ClusterAgglo(i);
 			t = alTweet.get(i);
 			c.addDoc(t);
 			c.calcCentroid();
@@ -119,50 +118,73 @@ public class AggloClustering {
 			//cari a,b yang paling kecil jaraknya dimana a<>b
 			//gabung a,b
 			//jumlah cluster akan berkurang separuh
-		
-		ArrayList<JarakCluster> alJarakCluster = new ArrayList<JarakCluster>();  //kumpulan cluster
-		ClusterKMeans c1,c2;
-		for (int i=0;i<alCluster.size();i++) {
-			c1 = alCluster.get(i);
-			for (int j=i;j<alCluster.size();j++) {
-				if (i!=j) {
-					c2 = alCluster.get(j);
-					double jarakcluster = c1.calcJarakAntarCluster(c2);
-					alJarakCluster.add(new JarakCluster(i,j,jarakcluster));
+		for (int level=0; level<3; level++) {  //testing dua kali dulu
+			
+			//hitung semua jarak antara cluster 
+			ArrayList<JarakCluster> alJarakCluster = new ArrayList<JarakCluster>();  //kumpulan jarak cluster
+			ClusterAgglo c1,c2;
+			for (int i=0;i<alCluster.size();i++) {
+				c1 = alCluster.get(i);
+				for (int j=i;j<alCluster.size();j++) {
+					if (i!=j) {
+						c2 = alCluster.get(j);
+						double jarakcluster = c1.calcJarakAntarCluster(c2);
+						alJarakCluster.add(new JarakCluster(i,j,jarakcluster));
+					}
 				}
 			}
-		}
-		Collections.sort(alJarakCluster, new JarakClusterComparable()); //sort berdasarkan terpendek
-		
-		JarakCluster jc;
-		ClusterKMeans ca,cb,cgab;
-		
-		ArrayList<ClusterKMeans> alClusterBaru = new ArrayList<ClusterKMeans>();
-		
-		
-		int cc=0;
-		for (int i=0;i<alJarakCluster.size();i++) {    //sudah terurut, bisa digabung dari yg terkecil
-			jc = alJarakCluster.get(i);
-			ca = alCluster.get(jc.i);
-			cb = alCluster.get(jc.j);
-			//gabung cluster, tandai agar tidak digabung lagi
-			if (!ca.flag&&!cb.flag) {
-				System.out.println("Gabung "+jc.i+" dengan "+jc.j);
-				ca.flag = true;
-				cb.flag = true;
-				ca.mergeCluster(cb);  //
-				//cc++;
-				//System.out.println(cc);
-				
-			}
+			Collections.sort(alJarakCluster, new JarakClusterComparable()); //sort berdasarkan terpendek
 			
 			
-//debug
-//			System.out.println(ca.centroid.toString());
-//			System.out.println("++");
-//			System.out.println(cb.centroid.toString());
-//			System.out.println(jc.jarak);
-//			System.out.println("------");
+			//penggabungan cluster yang terdekat
+			JarakCluster jc;
+			ClusterAgglo ca,cb;
+			ArrayList<ClusterAgglo> alClusterBaru = new ArrayList<ClusterAgglo>();
+			int cc=0;
+			for (int i=0;i<alJarakCluster.size();i++) {    //sudah terurut, bisa digabung dari yg terkecil
+				jc = alJarakCluster.get(i);
+				ca = alCluster.get(jc.i);
+				cb = alCluster.get(jc.j);
+				//gabung cluster, tandai agar tidak digabung lagi
+				if (!ca.flag&&!cb.flag) {
+					System.out.println("Gabung "+jc.i+" dengan "+jc.j);
+					ca.flag = true;
+					cb.flag = true;
+					ClusterAgglo cGab = new ClusterAgglo(level*1000+ca.idCluster);
+					cGab.mergeCluster(ca);
+					cGab.mergeCluster(cb);  
+					cGab.calcCentroid();
+					ca.parent = cGab;
+					cb.parent = cGab;
+					cGab.addChild(ca);
+					cGab.addChild(cb);
+					alClusterBaru.add(cGab);
+					//cc++;
+					//System.out.println(cc);
+				}
+	//debug
+	//			System.out.println(ca.centroid.toString());
+	//			System.out.println("++");
+	//			System.out.println(cb.centroid.toString());
+	//			System.out.println(jc.jarak);
+	//			System.out.println("------");
+			} //end for
+			alCluster = alClusterBaru;			
+		} //end loop
+		
+		//alCluster berisi cluster paling atas
+		
+		//print rekursif
+		printTree(alCluster);
+	}
+	
+	public void printTree(ArrayList<ClusterAgglo> alCluster) {
+		for (ClusterAgglo c: alCluster) {
+			c.print();
+			System.out.println("anak-->");
+			if (c.child!=null) {
+				printTree(c.child);
+			} 		
 		}
 	}
 	

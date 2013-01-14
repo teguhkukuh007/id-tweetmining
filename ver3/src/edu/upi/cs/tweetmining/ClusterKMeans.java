@@ -9,7 +9,7 @@ public class ClusterKMeans extends Cluster {
      *
      *
      */
-        public boolean flag=false;  //untuk berbagai keperluan
+       
         public DocKMeans centroid = new DocKMeans();
 
         public ClusterKMeans(int idCluster) {

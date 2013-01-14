@@ -25,9 +25,18 @@ import java.util.ArrayList;
  */
 public abstract class Cluster {
    public int idCluster;
-   protected ArrayList<Doc> alDoc = new ArrayList<Doc>();
-
-
+   public ArrayList<Doc> alDoc = new ArrayList<Doc>();
+   public boolean flag=false;  //untuk berbagai keperluan, menandai kalau sudah diproses etc
+   /*
+    *    tambah isi cluster c ke dalam this
+    */
+   public void mergeCluster(Cluster c) {
+	   for (Doc d:c.alDoc) {
+		   this.addDoc(d);
+	   }
+   }
+   
+   
    /**
          * add doc to cluster
          * @param d
@@ -81,12 +90,14 @@ public abstract class Cluster {
             sb.append("<end>\n");
             return (sb.toString());
     }
+    
+
 
     public Cluster(int idCluster) {
-            this.idCluster = idCluster;
+       this.idCluster = idCluster;
     }
-
+    
+    
     public Cluster() {
-        
     }
 }

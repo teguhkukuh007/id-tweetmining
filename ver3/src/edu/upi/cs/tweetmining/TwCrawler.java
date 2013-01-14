@@ -29,6 +29,7 @@ import java.sql.*;
 
 import java.net.Authenticator;
 import java.net.URL;
+import java.net.URLConnection;
 
 /**
  *  data mentah dikumpulkan di database, tidak diproses
@@ -119,8 +120,16 @@ public class TwCrawler {
             pUsr = conn.prepareStatement  ("insert into "+ tableName+"(content,status) values (?,0)");
             pErr = conn.prepareStatement  ("insert into crawl_log_gagal (log_str) values (?)");
            
+             
             u = new URL(strUrl); 
-            is = u.openStream();           
+            
+            URLConnection con = u.openConnection();
+//            con.setConnectTimeout(connectTimeout);
+//            con.setReadTimeout(readTimeout);
+            //is = u.openStream();         //kadang hang  
+
+            is = con.getInputStream();
+            System.out.print("_selesaiopenstraem_");  //debug
             
             char[] buffer = new char[1024 * 16]; 
             StringBuilder sbOut = new StringBuilder();
@@ -134,6 +143,7 @@ public class TwCrawler {
             in.close();
             
             String strOut = sbOut.toString();
+            System.out.print("__stringdidapat__");  //debug
             
             //cek apakah diakhiri dengan karakter "}", kalau TIDAK artinya JSON tidak valid, harus diskip
             if (strOut.length()>0) {
@@ -154,6 +164,7 @@ public class TwCrawler {
           	        }
           	        sc.close(); 
                     //isi tabel
+          	        System.out.print("__isitabel__");  //debug
                     pUsr.setString(1,strOut);  //status diset 0: belum di crawl untuk diambil friends            
                     pUsr.executeUpdate();
                }
@@ -162,6 +173,7 @@ public class TwCrawler {
             }
             //pUsr.close();    
             //conn.close();
+            System.out.println("__selsai__");  //debug
         } catch (Exception e) {
             logger.log(Level.SEVERE, null, e);
             //simpan ke database errornya, tujuannya lebih ke arah mencatat waktu yang 'hilang'. biasanya karena koneksi down

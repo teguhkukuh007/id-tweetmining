@@ -124,8 +124,8 @@ public class TwCrawler {
             u = new URL(strUrl); 
             
             URLConnection con = u.openConnection();
-//            con.setConnectTimeout(connectTimeout);
-//            con.setReadTimeout(readTimeout);
+            con.setConnectTimeout(30*1000);
+            con.setReadTimeout(30*1000);
             //is = u.openStream();         //kadang hang  
 
             is = con.getInputStream();

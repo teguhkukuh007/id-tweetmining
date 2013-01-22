@@ -122,6 +122,14 @@ public class ProsesTwMentahDB{
                return; 
             } else {jumMasuk++;}
             
+            String texttw;
+            texttw=hmRes.get("text");
+            if ((texttw.length()) >= 300 ) {
+            	//terlalu panjang (misal mengandung karakter spt &gt terlalu banyak, skip saja
+            	System.out.println("tweet terlalu panjang, skip");
+            	return;
+            }
+            
             long tempLong; 
             pInsertTw.setString(1, hmRes.get("text"));            
             pInsertTw.setLong(2, idTw);            
@@ -540,7 +548,7 @@ public class ProsesTwMentahDB{
 //    	ptm.userName = "yudi3";
 //    	ptm.password = "rahasia";
     	
-    	ptm.dbName = "localhost/obama";
+    	ptm.dbName = "localhost/obama2";
     	ptm.userName = "yudi3";
     	ptm.password = "rahasia";
     	
@@ -589,15 +597,10 @@ delete from user_mention;
 
 
 
-
-
-
-
--- Dumping structure for table indosat1.hashtag
 CREATE TABLE IF NOT EXISTS `hashtag` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id_internal_tw_jadi` bigint(20) NOT NULL,
-  `text` varchar(50) NOT NULL,
+  `text` varchar(150) NOT NULL,
   PRIMARY KEY (`id_internal`),
   KEY `id_interntal_tw` (`id_internal_tw_jadi`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -605,7 +608,7 @@ CREATE TABLE IF NOT EXISTS `hashtag` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.keywords_stat_per_jam
+
 CREATE TABLE IF NOT EXISTS `keywords_stat_per_jam` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id_stat_per_jam` bigint(20) NOT NULL DEFAULT '0',
@@ -617,7 +620,7 @@ CREATE TABLE IF NOT EXISTS `keywords_stat_per_jam` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.media
+
 CREATE TABLE IF NOT EXISTS `media` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id` bigint(20) NOT NULL,
@@ -635,7 +638,7 @@ CREATE TABLE IF NOT EXISTS `media` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.stat_per_hari
+
 CREATE TABLE IF NOT EXISTS `stat_per_hari` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `tgl_jam` datetime NOT NULL,
@@ -657,7 +660,7 @@ CREATE TABLE IF NOT EXISTS `stat_per_hari` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.stat_per_jam
+
 CREATE TABLE IF NOT EXISTS `stat_per_jam` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `tgl_jam` datetime NOT NULL,
@@ -687,7 +690,7 @@ CREATE TABLE IF NOT EXISTS `stat_per_jam` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.tw_jadi
+
 CREATE TABLE IF NOT EXISTS `tw_jadi` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id_internal_tw_mentah` bigint(20) NOT NULL,
@@ -707,7 +710,7 @@ CREATE TABLE IF NOT EXISTS `tw_jadi` (
   `profile_image_url` varchar(400) NOT NULL,
   `profile_image_url_https` varchar(400) NOT NULL,
   `source` varchar(200) NOT NULL,
-  `text` varchar(200) NOT NULL,
+  `text` varchar(300) NOT NULL,
   `to_user` varchar(100) DEFAULT NULL,
   `to_user_id` bigint(20) DEFAULT NULL,
   `to_user_name` varchar(100) DEFAULT NULL,

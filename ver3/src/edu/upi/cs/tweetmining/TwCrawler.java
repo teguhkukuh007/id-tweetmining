@@ -63,6 +63,17 @@ CREATE TABLE IF NOT EXISTS `crawl_log_gagal` (
 TBD, 
 - bisa dibuat lebih efisien untuk pemanggilan berulang kali? (walaupun masalah utama proses crawl dibatasi oleh limitasi API twitter)
 
+- tambah parameter, supaya lebih gampang dijalankan 
+  
+  -q query
+  -db databasename
+  -u username
+  -p password
+  -proxyhost proxyhost
+  -proxyport proxyport
+  -proxyuser usernameproxy
+  -proxypass proxypassword
+  -createtable
 
  */
 
@@ -76,8 +87,8 @@ public class TwCrawler {
    public String query;
    private String nextQuery="";      //untuk page selanjutnya
    
-   String proxyHost="";//"cache.itb.ac.id";
-   String proxyPort="";//8080";
+   String proxyHost="";
+   String proxyPort="";
    String userNameProxy="";
    String passwordProxy="";
    
@@ -115,21 +126,16 @@ public class TwCrawler {
             
             String strUrl = "http://search.twitter.com/search.json?"+q; 
             System.out.println("mulai mengambil, query:"+q);
-            
-            
             pUsr = conn.prepareStatement  ("insert into "+ tableName+"(content,status) values (?,0)");
             pErr = conn.prepareStatement  ("insert into crawl_log_gagal (log_str) values (?)");
-           
-             
             u = new URL(strUrl); 
             
             URLConnection con = u.openConnection();
-            con.setConnectTimeout(30*1000);
+            con.setConnectTimeout(30*1000); 
             con.setReadTimeout(30*1000);
-            //is = u.openStream();         //kadang hang  
 
             is = con.getInputStream();
-            System.out.print("_selesaiopenstraem_");  //debug
+            System.out.print("_selesaiopenstream_");  //debug
             
             char[] buffer = new char[1024 * 16]; 
             StringBuilder sbOut = new StringBuilder();

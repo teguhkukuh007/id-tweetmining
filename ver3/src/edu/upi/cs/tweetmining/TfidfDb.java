@@ -37,16 +37,18 @@ import java.util.Comparator;
  * @author Yudi Wibisono (yudi@upi.edu)
  * Memberikan bobot kepada setiap term (rawTF*IDF) pada dokumen
  * tambahan:
- *   - term yg muncul di dalam  < 5  tweet akan dibuang (sekalian saat hitung idf)
+ *   - term yg muncul di dalam  < MINFREQ  tweet akan dibuang (sekalian saat hitung idf)
  */
 
 
 public class TfidfDb {
-     public static final int MINTWEET = 7;  //minimum kemunculam tweet yg mengandung term supaya dihitung
+     public static final int MINTWEET = 3;  //minimum kemunculam tweet yg mengandung term supaya dihitung
+     public static final int MINFREQ  = 3;  //minimum kemunculam tweet yg mengandung term supaya dihitung
      
      public String dbName;
      public String userName;
      public String password;
+     public String tableName="tw_jadi";
      
      
      private ArrayList<String>  alExtStopWords = new ArrayList<String>();
@@ -123,7 +125,7 @@ public class TfidfDb {
             
             Integer freq;
             
-            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from tw_jadi");
+            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+tableName);
             pInsertTfIdf =
                     conn.prepareStatement("insert into tfidf (id_internal_tw_jadi,tfidf_val)"
                                   + "values (?,?) ");
@@ -214,6 +216,7 @@ public class TfidfDb {
 //            in.close();
 //            pw.close();
         } catch (Exception e) {
+        	e.printStackTrace();
             logger.severe(e.toString()); //ROLLBACK
        		if (conn != null) {
                try {
@@ -285,7 +288,7 @@ public class TfidfDb {
             ArrayList<TermStat> arrTS = new ArrayList<TermStat>();
             for (Map.Entry<String,TermStat> term : termMap.entrySet()) {                
                 ts = term.getValue();
-                if (ts.getFreq()<5) {
+                if (ts.getFreq()<MINFREQ) {
                     continue;
                 } //skip term yg hanya muncul xx kali
                 ts.calcAvg();
@@ -304,9 +307,10 @@ public class TfidfDb {
      public static void main(String[] Args) {
         //testing
         TfidfDb t = new TfidfDb();
-        t.dbName="localhost/obama";
+        t.dbName="localhost/obama2";
         t.userName="yudi3";
         t.password="rahasia";
+        t.tableName="tw_jadi_sandyhoax_nodup_dukungan";
         t.process();
         //t.process("g:\\eksperimen\\data_weka\\tw_obama.txt","g:\\eksperimen\\data_weka\\stopwords.txt");
 //        t.process("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn.txt","e:\\tweetmining\\catatan_stopwords_weight.txt");
@@ -314,7 +318,7 @@ public class TfidfDb {
        //   t.stat("g:\\eksperimen\\data_weka\\tw_obama_tfidf.txt");
      }
 /*     
-     -- Dumping structure for table indosat1.user_mention
+
      drop table tfidf;
      CREATE TABLE IF NOT EXISTS `tfidf` (
        `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,

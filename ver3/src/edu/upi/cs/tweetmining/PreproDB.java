@@ -63,7 +63,7 @@ public class PreproDB {
 	public String dbName;           // format: localhost/mydbname
 	public String userName;
 	public String password;
-	private final String tableName="tw_jadi";        // table tweet_jadi (lihat output class ProsesTwMentah) 
+	public String tableName="tw_jadi";        // table tweet_jadi (lihat output class ProsesTwMentah) 
 	                                	      //tweet disimpan di field text, output prepro akan disimpan di field text_prepro, 
 										      //flag difield is_prepro  (0 belum diprepro, 1 sudah) <-- jgn lupa diindex
 	
@@ -486,18 +486,19 @@ CREATE TABLE  `stopwords` (
 		
 		
 		PreproDB pdb = new PreproDB(); 		
-		pdb.dbName = "localhost/obama";
+		pdb.dbName = "localhost/obama2";
 		pdb.userName = "yudi3";
 		pdb.password = "rahasia";
-//		pdb.isBuangMention=false;
-//		pdb.isBuangHashtag=false;
-//		pdb.isProsesSinonim=false;
-//		pdb.isBuangStopwords=true;
-//		pdb.proses();
-//		System.out.println("Jumlah diproses="+pdb.jumDiproses);
+		pdb.tableName="tw_jadi_sandyhoax";
+		pdb.isBuangMention=true;
+		pdb.isBuangHashtag=false;
+		pdb.isProsesSinonim=false;
+		pdb.isBuangStopwords=true;
+		pdb.proses();
+		System.out.println("Jumlah diproses="+pdb.jumDiproses);
 		
-		pdb.flagDuplicate();
-    	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
+//		pdb.flagDuplicate();
+//    	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
 		
 		
 //		PreproDB pdb = new PreproDB(); 		
@@ -559,3 +560,193 @@ CREATE TABLE  `stopwords` (
 	}
 
 }
+
+/*
+
+update tw_jadi_sandyhoax set is_prepro = 0;
+
+CREATE TABLE IF NOT EXISTS `stopwords` (
+  `id_internal` int(10) NOT NULL AUTO_INCREMENT,
+  `kata` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id_internal`),
+  UNIQUE KEY `kata` (`kata`)
+) ENGINE=InnoDB AUTO_INCREMENT=185 DEFAULT CHARSET=utf8;
+
+INSERT INTO `stopwords` (`id_internal`, `kata`) VALUES
+	(11, 'a'),
+	(12, 'about'),
+	(13, 'above'),
+	(14, 'after'),
+	(15, 'again'),
+	(16, 'against'),
+	(17, 'all'),
+	(18, 'am'),
+	(19, 'an'),
+	(20, 'and'),
+	(21, 'any'),
+	(22, 'are'),
+	(23, 'aren\'t'),
+	(24, 'as'),
+	(25, 'at'),
+	(26, 'be'),
+	(27, 'because'),
+	(28, 'been'),
+	(29, 'before'),
+	(30, 'being'),
+	(31, 'below'),
+	(32, 'between'),
+	(33, 'both'),
+	(34, 'but'),
+	(35, 'by'),
+	(36, 'can\'t'),
+	(37, 'cannot'),
+	(38, 'could'),
+	(39, 'couldn\'t'),
+	(40, 'did'),
+	(41, 'didn\'t'),
+	(42, 'do'),
+	(43, 'does'),
+	(44, 'doesn\'t'),
+	(45, 'doing'),
+	(46, 'don\'t'),
+	(47, 'down'),
+	(48, 'during'),
+	(49, 'each'),
+	(50, 'few'),
+	(51, 'for'),
+	(52, 'from'),
+	(53, 'further'),
+	(54, 'had'),
+	(55, 'hadn\'t'),
+	(56, 'has'),
+	(57, 'hasn\'t'),
+	(58, 'have'),
+	(59, 'haven\'t'),
+	(60, 'having'),
+	(61, 'he'),
+	(62, 'he\'d'),
+	(63, 'he\'ll'),
+	(64, 'he\'s'),
+	(65, 'her'),
+	(66, 'here'),
+	(67, 'here\'s'),
+	(68, 'hers'),
+	(69, 'herself'),
+	(70, 'him'),
+	(71, 'himself'),
+	(72, 'his'),
+	(73, 'how'),
+	(74, 'how\'s'),
+	(75, 'i'),
+	(76, 'i\'d'),
+	(77, 'i\'ll'),
+	(78, 'i\'m'),
+	(79, 'i\'ve'),
+	(80, 'if'),
+	(81, 'in'),
+	(82, 'into'),
+	(83, 'is'),
+	(84, 'isn\'t'),
+	(85, 'it'),
+	(86, 'it\'s'),
+	(87, 'its'),
+	(88, 'itself'),
+	(89, 'let\'s'),
+	(90, 'me'),
+	(91, 'more'),
+	(92, 'most'),
+	(93, 'mustn\'t'),
+	(94, 'my'),
+	(95, 'myself'),
+	(96, 'no'),
+	(97, 'nor'),
+	(98, 'not'),
+	(99, 'of'),
+	(100, 'off'),
+	(101, 'on'),
+	(102, 'once'),
+	(103, 'only'),
+	(104, 'or'),
+	(105, 'other'),
+	(106, 'ought'),
+	(107, 'our'),
+	(108, 'ours'),
+	(109, 'ourselves'),
+	(110, 'out'),
+	(111, 'over'),
+	(112, 'own'),
+	(113, 'same'),
+	(114, 'shan\'t'),
+	(115, 'she'),
+	(116, 'she\'d'),
+	(117, 'she\'ll'),
+	(118, 'she\'s'),
+	(119, 'should'),
+	(120, 'shouldn\'t'),
+	(121, 'so'),
+	(122, 'some'),
+	(123, 'such'),
+	(124, 'than'),
+	(125, 'that'),
+	(126, 'that\'s'),
+	(127, 'the'),
+	(128, 'their'),
+	(129, 'theirs'),
+	(130, 'them'),
+	(131, 'themselves'),
+	(132, 'then'),
+	(133, 'there'),
+	(134, 'there\'s'),
+	(135, 'these'),
+	(136, 'they'),
+	(137, 'they\'d'),
+	(138, 'they\'ll'),
+	(139, 'they\'re'),
+	(140, 'they\'ve'),
+	(141, 'this'),
+	(142, 'those'),
+	(143, 'through'),
+	(144, 'to'),
+	(145, 'too'),
+	(146, 'under'),
+	(147, 'until'),
+	(148, 'up'),
+	(149, 'very'),
+	(150, 'was'),
+	(151, 'wasn\'t'),
+	(152, 'we'),
+	(153, 'we\'d'),
+	(154, 'we\'ll'),
+	(155, 'we\'re'),
+	(156, 'we\'ve'),
+	(157, 'were'),
+	(158, 'weren\'t'),
+	(159, 'what'),
+	(160, 'what\'s'),
+	(161, 'when'),
+	(162, 'when\'s'),
+	(163, 'where'),
+	(164, 'where\'s'),
+	(165, 'which'),
+	(166, 'while'),
+	(167, 'who'),
+	(168, 'who\'s'),
+	(169, 'whom'),
+	(170, 'why'),
+	(171, 'why\'s'),
+	(172, 'with'),
+	(173, 'won\'t'),
+	(174, 'would'),
+	(175, 'wouldn\'t'),
+	(176, 'you'),
+	(177, 'you\'d'),
+	(178, 'you\'ll'),
+	(179, 'you\'re'),
+	(180, 'you\'ve'),
+	(181, 'your'),
+	(182, 'yours'),
+	(183, 'yourself'),
+	(184, 'yourselves');
+	(184, 'rt');
+
+*/

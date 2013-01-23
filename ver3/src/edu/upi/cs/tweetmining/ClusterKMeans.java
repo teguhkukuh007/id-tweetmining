@@ -9,7 +9,25 @@ public class ClusterKMeans extends Cluster {
      *
      *
      */
-       
+	
+	   @Override
+	   public String toString() {
+	            StringBuilder sb = new StringBuilder();
+	            sb.append("\nIDCluster:").append(idCluster).append("\n");
+	            sb.append("Label"+"\n");
+	            sb.append(this.getLabel());
+	            sb.append("Medoid:"+"\n");
+	            sb.append(this.getMedoid());
+	            sb.append("\n");
+	            sb.append("Isi Cluster:  \n");
+	            for (Doc d : alDoc) {
+	                sb.append(d.text).append("\n");
+	                //sb.append(d.toString()).append("\n");  //debug,
+	            }
+	            sb.append("\n");
+	            return sb.toString();
+	    }
+	
         public DocKMeans centroid = new DocKMeans();
 
         public ClusterKMeans(int idCluster) {
@@ -18,6 +36,21 @@ public class ClusterKMeans extends Cluster {
         
         public String getLabel() {
            return centroid.bestToString();
+        }
+        
+        public String getMedoid() {
+        	//return tweet yang paling dekat dengan centroid
+        	double val;
+        	double minVal = Double.MAX_VALUE;
+        	Doc m=null;
+        	for (Doc d : alDoc) {  //semua dok dalam cluster
+        		val = centroid.similar((DocKMeans)d);
+        		if (val<minVal) {
+        			minVal = val;
+        			m = d;
+        		}
+        	}
+        	return m.text;
         }
         
         /*

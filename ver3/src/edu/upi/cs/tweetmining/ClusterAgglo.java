@@ -6,6 +6,7 @@ public class ClusterAgglo extends ClusterKMeans {
 	
 	public ClusterAgglo parent ;            
 	public ArrayList<ClusterAgglo> child = new ArrayList<ClusterAgglo>();
+	public String level; //"1 -> 1.1 -> 1.1.1 dst 
 	
 	public void addChild(ClusterAgglo c) {
 		child.add(c);

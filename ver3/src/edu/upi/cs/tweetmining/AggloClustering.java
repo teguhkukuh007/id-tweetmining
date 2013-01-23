@@ -38,9 +38,11 @@ public class AggloClustering {
     public String userName;
     public String password;
     public String namaFileOut;
+    public String tableNameTwJadi="tw_jadi";
 	
 	
 	public void process() {
+		//menggunakan LIMIT, cek dulu!!
 		//mulai dari jumlah cluster sebanyak data
 		//loop untuk semua cluster, cari cluster yang jarak antar keduanya terpendek, gabung
 		//kondisi berhenti jika sisa cluster=2
@@ -68,8 +70,11 @@ public class AggloClustering {
             
             
             //nanti limitnya dimatikan
+            //ambil tweet original karena untuk perhitungan yg digunakan adalah tfidf
             pTw  =  
-              conn.prepareStatement ("select tj.text_prepro as tw,t.tfidf_val as tfidf from tfidf t, tw_jadi tj where t.id_internal_tw_jadi = tj.id_internal and trim(t.tfidf_val)<>'' limit 0,100");
+              conn.prepareStatement ("select  concat('(',tj.id_internal,')',tj.text) as tw,t.tfidf_val as tfidf from tfidf t,"+tableNameTwJadi+" tj where t.id_internal_tw_jadi = tj.id_internal and trim(t.tfidf_val)<>'' limit 0,1000");
+
+            
             ResultSet rsTw = pTw.executeQuery();
             int cc=0;
             while (rsTw.next())   {  //bobotnya	
@@ -104,6 +109,7 @@ public class AggloClustering {
         DocKMeans t;
 		for (int i=0;i<alTweet.size();i++) {
 			ClusterAgglo c = new ClusterAgglo(i);
+			
 			t = alTweet.get(i);
 			c.addDoc(t);
 			c.calcCentroid();
@@ -118,8 +124,9 @@ public class AggloClustering {
 			//cari a,b yang paling kecil jaraknya dimana a<>b
 			//gabung a,b
 			//jumlah cluster akan berkurang separuh
-		for (int level=0; level<3; level++) {  //testing dua kali dulu
-			
+		//for (int level=0; level<3; level++) {  //testing dua kali dulu
+		int level =1;
+		while (alCluster.size()>1) {
 			//hitung semua jarak antara cluster 
 			ArrayList<JarakCluster> alJarakCluster = new ArrayList<JarakCluster>();  //kumpulan jarak cluster
 			ClusterAgglo c1,c2;
@@ -169,17 +176,44 @@ public class AggloClustering {
 	//			System.out.println(jc.jarak);
 	//			System.out.println("------");
 			} //end for
-			alCluster = alClusterBaru;			
+			alCluster = alClusterBaru;	
+			level++;
 		} //end loop
-		
 		//alCluster berisi cluster paling atas
-		
 		//print rekursif
+		
+		//beri label
+		
+		//beriLabel(alCluster,"1");
+		//printTreeMedoid(alCluster,"",1);
 		printTree(alCluster);
 	}
 	
+	private void printTreeMedoid(ArrayList<ClusterAgglo> alCluster, String level, int levelChild) {
+		for (ClusterAgglo c: alCluster) {
+			if (c.parent!=null) {
+				System.out.println("idParent:"+c.parent.idCluster);
+				//c.level = level+"."+Integer.toString(levelChild);
+				//System.out.println(c.parent.level);
+				//System.out.println("idParent:"+c.parent.idCluster);
+			} else {
+				c.level = Integer.toString(levelChild);  //level 1
+			}
+			System.out.println(c.idCluster);
+			System.out.println(c.getMedoid());
+			System.out.println();
+			if (c.child!=null) {
+				printTreeMedoid(c.child,c.level,levelChild++);
+			} 		
+		}
+	}
+	
+	
 	public void printTree(ArrayList<ClusterAgglo> alCluster) {
 		for (ClusterAgglo c: alCluster) {
+			if (c.parent!=null) {
+				System.out.println("idParent:"+c.parent.idCluster);
+			}
 			c.print();
 			System.out.println("anak-->");
 			if (c.child!=null) {
@@ -191,10 +225,11 @@ public class AggloClustering {
 	
 	public static void main(String[] args) {
 		AggloClustering aggC= new AggloClustering();
-		aggC.dbName="localhost/obama";
+		aggC.dbName="localhost/obama2";
 		aggC.userName="yudi3";
 		aggC.password="rahasia";
-		aggC.namaFileOut= "g:\\eksperimen\\obama\\cluster.txt";
+		aggC.tableNameTwJadi ="tw_jadi_sandyhoax_nodup_dukungan";
+		aggC.namaFileOut= "g:\\eksperimen\\obama\\cluster_sandy_hoax.txt";
 		aggC.process();
 	}
 }

@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author yudi wibisono
+ * @author yudi wibisono (yudi@upi.edu)
  */
 public class Doc {
     protected int numTerm=0;
@@ -31,12 +31,11 @@ public class Doc {
     protected Cluster idCluster=null;
     public int id=-1;
     public String text;                  //original teks
-    public int rowNum=-1;                //untuk debug, baris di file teks-nya
     public HashMap<String,Double> vector = new HashMap<String,Double>();  //term dengan weightnya
     Logger log = Logger.getLogger("edu.cs.upi.doc");
     
     /**
-     *   Memperoses term dalam bentuk 
+     *   Memperoses bobot term dalam bentuk 
      *   contoh input:
      *   di=2.1972245773362196;ayo=5.123963979403259;cinta=5.198497031265826;
      */
@@ -58,7 +57,6 @@ public class Doc {
 	                        }
 	                }
                 } catch (Exception e) {
-                     
                 	log.severe(e.toString());
                 }    
     }

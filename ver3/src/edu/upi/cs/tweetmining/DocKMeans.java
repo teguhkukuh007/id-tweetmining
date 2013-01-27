@@ -119,7 +119,9 @@ public class DocKMeans extends Doc{
          double similar(DocKMeans otherDoc) {
              //kesamaan antara dua doc
              //rumus kedekatan dua tweets   (sum (x[i] x y[i]) / (  sqr(sum(x[i]^2)) x sqr(sum(y[i]^2))  )  --> cosine similiarity
-             double simVal =0;
+             //1 paling dekat, 0 paling jauh
+        	 
+        	 double simVal =0;
              double pembagi =0;
              this.calcSqrtSumSqrWeight();
              otherDoc.calcSqrtSumSqrWeight();
@@ -134,9 +136,9 @@ public class DocKMeans extends Doc{
 
              pembagi = (this.sqrtSumSqrWeight * otherDoc.sqrtSumSqrWeight);  //mencegah NaN
              if (pembagi!=0) {
-                 simVal = sumXY / (this.sqrtSumSqrWeight * otherDoc.sqrtSumSqrWeight);
+                 simVal = sumXY / pembagi;
              } else {
-                simVal = Double.MAX_VALUE; //error salah satu doc semua bobotnya nol, dianggap sangat berjauhan, perlu smoothing?
+                simVal = 0; //error salah satu doc semua bobotnya nol, dianggap berjauhan, perlu smoothing?
              }
 
              return simVal;

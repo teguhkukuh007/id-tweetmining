@@ -148,7 +148,7 @@ public class PAMClustering {
                        }
                }
                if (nearestCluster==null)  {  //ada yg error
-                   log.log(Level.SEVERE, "Error!!{0}", t2.rowNum);
+                   log.log(Level.SEVERE, "Error!!{0}");
                }
                nearestCluster.addDoc(t2);
            }
@@ -220,7 +220,6 @@ public class PAMClustering {
                 strLineStr = brStr.readLine();                 //tweet dalam bentuk string nya
                 DocPAM tweet = new DocPAM();
                 tweet.text = strLineStr;
-                tweet.rowNum = cc;
                 tweet.addTermsInLine(strLineVec);
                 alTweet.add(tweet);
            } //end while, altweet sudah berisi tweet2
@@ -318,7 +317,6 @@ public class PAMClustering {
                //hitung ulang centroid
                for (Cluster c:alCluster) {  //bandingkan dengan semua cluster
                   pw.append(c.toString());
-                  pwRowNum.append(c.printWithRowNum());
                }
                pw.close();
                pwRowNum.close();

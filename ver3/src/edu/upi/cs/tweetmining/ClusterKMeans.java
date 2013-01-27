@@ -4,7 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ClusterKMeans extends Cluster {
-	 /**
+	 
+	/**
      * representasi cluster dengan centroid
      *
      *
@@ -30,7 +31,7 @@ public class ClusterKMeans extends Cluster {
 	
         public DocKMeans centroid = new DocKMeans();
 
-        public ClusterKMeans(int idCluster) {
+        public ClusterKMeans(long idCluster) {
             super(idCluster);
         }
         
@@ -40,17 +41,40 @@ public class ClusterKMeans extends Cluster {
         
         public String getMedoid() {
         	//return tweet yang paling dekat dengan centroid
+        	//ingat 1: paling dekat, 0 paling jauh
         	double val;
-        	double minVal = Double.MAX_VALUE;
+        	double maxVal = Double.MIN_VALUE;
         	Doc m=null;
         	for (Doc d : alDoc) {  //semua dok dalam cluster
         		val = centroid.similar((DocKMeans)d);
-        		if (val<minVal) {
-        			minVal = val;
+        		if (val>maxVal) {
+        			maxVal = val;
         			m = d;
         		}
         	}
         	return m.text;
+        }
+        
+        /*
+         *  menghitung kualitas intrinsik cluster, membandingkan kedekatan antar item
+         *  
+         */
+        public double cohesion() {
+        	double totJarakcluster = 0;int cc=0;
+        	for (int i=0;i<alDoc.size();i++) {
+				DocKMeans d1 = (DocKMeans) alDoc.get(i);
+				for (int j=i;j<alDoc.size();j++) {
+					if (i!=j) {
+						DocKMeans d2 = (DocKMeans) alDoc.get(j);
+						totJarakcluster = totJarakcluster + d1.similar(d2);     //1:sama, 0: total berlainan
+						cc++;
+					}
+				}
+			}
+        	if (cc>0)  {
+        		return totJarakcluster/cc;
+        	}
+        	return 0;
         }
         
         /*

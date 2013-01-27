@@ -79,7 +79,6 @@ public class KMeansClusteringDB {
             	
                 DocKMeans tweet = new DocKMeans();
                 tweet.text = strLine2;
-                tweet.rowNum = cc;
                 tweet.addTermsInLine(strLine);
                 System.out.println("-->"+tweet.text);
                 alTweet.add(tweet);
@@ -148,7 +147,7 @@ public class KMeansClusteringDB {
                        }
                }
                if (nearestCluster==null)  {  //ada yg error
-                   log.log(Level.SEVERE, "Error!!{0}", d.rowNum);
+                   log.log(Level.SEVERE, "Error!!{0}");
                } 
                if (d.oldIdCluster!=nearestCluster) {
                    //terjadi perubahan cluster

@@ -21,12 +21,14 @@ import java.util.ArrayList;
 
 /**
  * representasi cluster hasil dari clustering
- * @author yudi wibisono
+ * @author yudi wibisono (yudi@upi.edu)
  */
+
+
 public abstract class Cluster {
-   public int idCluster;
-   public ArrayList<Doc> alDoc = new ArrayList<Doc>();
-   public boolean flag=false;  //untuk berbagai keperluan, menandai kalau sudah diproses etc
+   public long idCluster;
+   public ArrayList<Doc> alDoc = new ArrayList<Doc>();  //
+   public boolean flag=false;                           //untuk berbagai keperluan, menandai kalau sudah diproses etc
    /*
     *    tambah isi cluster c ke dalam this
     */
@@ -76,24 +78,24 @@ public abstract class Cluster {
             return sb.toString();
     }
 
-    public String printWithRowNum() {
-            StringBuilder sb = new  StringBuilder();
-            sb.append("\nIDCluster:").append(idCluster).append("\n");
-            sb.append("Label"+"\n");
-            sb.append(this.getLabel());
-            sb.append("\n");
-            sb.append("<start>\n");
-            for (Doc d : alDoc) {
-                sb.append(d.rowNum).append("|").append(d.text).append("\n");
-                //sb.append(d.toString()).append("\n");  //debug,
-            }
-            sb.append("<end>\n");
-            return (sb.toString());
-    }
+//    public String printWithRowNum() {
+//            StringBuilder sb = new  StringBuilder();
+//            sb.append("\nIDCluster:").append(idCluster).append("\n");
+//            sb.append("Label"+"\n");
+//            sb.append(this.getLabel());
+//            sb.append("\n");
+//            sb.append("<start>\n");
+//            for (Doc d : alDoc) {
+//                sb.append(d.rowNum).append("|").append(d.text).append("\n");
+//                //sb.append(d.toString()).append("\n");  //debug,
+//            }
+//            sb.append("<end>\n");
+//            return (sb.toString());
+//    }
     
 
 
-    public Cluster(int idCluster) {
+    public Cluster(long idCluster) {
        this.idCluster = idCluster;
     }
     

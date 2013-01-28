@@ -247,7 +247,7 @@ public class LatLongToRawLocationDB {
 //	    	tw.proxyHost ="cache.itb.ac.id";
 //	    	tw.proxyPort ="8080";
 //	    	tw.userNameProxy ="yudi.wibisono";
-//	    	tw.passwordProxy ="sariwangitop";
+//	    	tw.passwordProxy ="*********";
 	    	ll.dbName = "localhost/masterchef2";
 	    	ll.userName = "yudi3";
 	    	ll.password = "rahasia";

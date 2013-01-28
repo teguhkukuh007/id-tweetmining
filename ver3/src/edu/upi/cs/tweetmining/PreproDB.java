@@ -36,21 +36,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /*     
- *     preprocessing tapi dilakukan di tabel
+ *     casefolding, stopwords removal, url removal, mention removal
  *     
+ *     input: 
+ *     	tabel tw_jadi.text (gunakan ProsesTwMentahDB untuk mendapatkan tw_jadi dari tw_mentah)
+ *      
+ *     output
+ *      tw_jadi.text_prepro 
+ *      
+ *     setelah diproses akan merubah field tw_jadi.is_prepro menjadi 1 
  *     
+ *     def table untuk stopwords ada di bawah
+ *     atau bisa dibuat dengan utility fileStopwordsToDB dan fileSinonimToDB
  *     
- *     
- *     
- *     
-//query untuk menambahkan field yang dibutuhkan untuk prepro
-
-alter table tw_jadi 
-add text_prepro varchar(200) NOT NULL,
-add is_prepro int(11) NOT NULL DEFAULT 0,
-add KEY is_prepro (is_prepro);
-
-     
  */
 
 public class PreproDB {
@@ -60,6 +58,7 @@ public class PreproDB {
     private ArrayList<String> alStopWords = new ArrayList<String>();      //kata stopwordss
 	public int jumTdkDiproses=0;
 	public int jumDiproses=0;
+	
 	public String dbName;           // format: localhost/mydbname
 	public String userName;
 	public String password;
@@ -383,6 +382,7 @@ public class PreproDB {
 	
 	
 	public void flagDuplicate() {
+		
 		//LAMA SEKALI PROSESNYA akibat sort? atau pembandingan? --> TBD cari cara untuk dipercepat. 
 		//TBD --> tambahkan commit/rollback
 		//memflag record yang duplikasi
@@ -392,7 +392,7 @@ public class PreproDB {
 		//tantangannya: tidak efisien jika menggunakan SQL--> order by text_prepro jika ukuran database besar
 		//solusi: ambil sebagian-sebagian, sort, buang yang dobel
 		//menggunakan flag is_duplicate_checked
-		//mengisi is_duplicate dengan 1 jika ada duplikasi (nanti record ini diabaikan dalam proses clustering, learning dst)
+		//mengisi is_duplicate dengan 1 jika ada duplikasi (nanti record ini bisa diabaikan dalam proses clustering, learning dst)
 		
 		System.out.println("Prepro");
         Connection conn=null;      
@@ -407,7 +407,8 @@ public class PreproDB {
             pFlag = conn.prepareStatement ("update "+tableName+" set is_duplicate_checked = 1 where id_internal = ?");
             pDup = conn.prepareStatement  ("update "+tableName+" set is_duplicate = 1 where id_internal = ?");
             
-            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+ tableName +" where is_duplicate_checked = 0 order by text_prepro limit 0,50 ");  
+            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+ tableName +" where is_duplicate_checked = 0 and text_prepro is not null order by text_prepro limit 0,500 ");  
+            
             //harus disort!
             //kode ditasa punya resiko performance kalau di order dulu baru dilimint
             //idalnya mungkin menggunakan limit saja, diambil ke memori baru disort  <-- lebih kompleks
@@ -489,16 +490,16 @@ CREATE TABLE  `stopwords` (
 		pdb.dbName = "localhost/obama2";
 		pdb.userName = "yudi3";
 		pdb.password = "rahasia";
-		pdb.tableName="tw_jadi_sandyhoax";
+		pdb.tableName="tw_jadi";
 		pdb.isBuangMention=true;
 		pdb.isBuangHashtag=false;
 		pdb.isProsesSinonim=false;
 		pdb.isBuangStopwords=true;
-		pdb.proses();
-		System.out.println("Jumlah diproses="+pdb.jumDiproses);
+//		pdb.proses();
+//		System.out.println("Jumlah diproses="+pdb.jumDiproses);
 		
-//		pdb.flagDuplicate();
-//    	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
+		pdb.flagDuplicate();
+    	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
 		
 		
 //		PreproDB pdb = new PreproDB(); 		

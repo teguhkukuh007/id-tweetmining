@@ -60,7 +60,7 @@ public abstract class Cluster {
             System.out.println(this.toString());
    }
 
-   //cluster label
+   public abstract double innerQualityScore(); 
    
    public abstract String getLabel();
 

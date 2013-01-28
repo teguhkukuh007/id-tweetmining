@@ -129,6 +129,12 @@ public class PAMClustering {
             return medoid.text+"\n";
         }
 
+		@Override
+		public double innerQualityScore() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
    
  }
 

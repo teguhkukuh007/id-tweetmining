@@ -1,5 +1,6 @@
 package edu.upi.cs.tweetmining;
 
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -19,10 +20,20 @@ public class AggloClusteringDB {
  *   - twjadi hasil dari PrepoTwMentahDB
  *   - tfidf hasil  dari TfidfDB
  *   
+ *   output ke file teks (dalam format html)
+ *   - tbd: output ke table juga??   
+ *    
  *   note: cek querynya, mungkin menggunakan limit
  *   
- *   jumlah data kalau bukan kelipatan pangkat 2 (2,4,8,16,32 maka akan terbuang) <-- nanti diperbaiki
  */
+	
+	
+	public String dbName;
+    public String userName;
+    public String password;
+    public String namaFileOutput;
+    public String tableNameTwJadi="tw_jadi";  //default
+    public String tableNameTfidf ="tfidf";
 	
 	private class JarakCluster  {
 		public int i;
@@ -44,22 +55,25 @@ public class AggloClusteringDB {
     }
     
     //berdasarkan kohesi
-    public class CohesionClusterComparable implements Comparator<ClusterKMeans>{
+    public class CohesionClusterComparable implements Comparator<ClusterAgglo>{
         @Override
-        public int compare(ClusterKMeans o1, ClusterKMeans o2) {
+        public int compare(ClusterAgglo o1, ClusterAgglo o2) {
             double coh1 = o1.cohesion();     
             double coh2 = o2.cohesion();
         	return (coh1>coh2 ? -1 : (coh1==coh2 ? 0 : 1));
         }
     }
-	
-	
-	public String dbName;
-    public String userName;
-    public String password;
-    public String namaFileOut;
-    public String tableNameTwJadi="tw_jadi";  //default
-	
+    
+    //berdasarkan inner quality
+    public class InnerQClusterComparable implements Comparator<ClusterAgglo>{
+        @Override
+        public int compare(ClusterAgglo o1, ClusterAgglo o2) {
+            double coh1 = o1.innerQualityScore();     
+            double coh2 = o2.innerQualityScore();
+        	return (coh1>coh2 ? -1 : (coh1==coh2 ? 0 : 1));
+        }
+    }
+
     
     private ArrayList<ClusterAgglo> alAllCluster = new ArrayList<ClusterAgglo>();  //semua cluster dalam tree
 	
@@ -88,12 +102,13 @@ public class AggloClusteringDB {
             System.out.println(strCon);
             conn = DriverManager.getConnection(strCon);
             
-            //nanti limitnya dimatikan
+            //nanti limitnya dimatikan?
+            //data yang duplikat tidak diproses
             //ambil tweet original karena untuk perhitungan yg digunakan adalah tfidf
-            //
+            
             String q = "select  concat('(',tj.id_internal,')',tj.text) as tw,t.tfidf_val as tfidf "+
-            		   "from tfidf t,"+ tableNameTwJadi + " tj " + 
-            		   "where t.id_internal_tw_jadi = tj.id_internal and trim(t.tfidf_val)<>'' "+
+            		   "from "+ tableNameTfidf +" t,"+ tableNameTwJadi + " tj " + 
+            		   "where t.id_internal_tw_jadi = tj.id_internal and trim(t.tfidf_val)<>'' and tj.is_duplicate=0 "+
             		   "limit 0,1000";
             
             pTw  =  conn.prepareStatement (q);
@@ -132,6 +147,7 @@ public class AggloClusteringDB {
      	} else if (lg % 1.0 == 0) {
      			level =(long) ( lg+1);
      	}
+     	long maxLevel = level; 
      		
      	System.out.println("Jum data:"+alTweet.size());
      	System.out.println("Level:"+level);
@@ -247,31 +263,48 @@ public class AggloClusteringDB {
 		//
 		
 		
-//      tampilkan cluster berdasarkan kohesinya 		
-//		Collections.sort(alAllCluster, new CohesionClusterComparable()); //sort berdasarkan terpendek (1:paling pendek, 0: paling jauh)
-//		
-//		double sumK=0;
-//		for  (int i=0;i<alAllCluster.size();i++) {
-//			ClusterAgglo c = alAllCluster.get(i);
-//			
-//			System.out.println("Kohesi="+c.cohesion()+" ");
-//			sumK = sumK + c.cohesion();
-//			System.out.println("Clus ID="+c.idCluster+" ");
-//			System.out.println("Clus Level="+c.level +" ");
-//			System.out.println(c.getMedoid());
-//			System.out.println();
+        //tampilkan cluster berdasarkan kohesinya 		
+		try {
+			PrintWriter pw = new PrintWriter(namaFileOutput);
+			//Collections.sort(alAllCluster, new CohesionClusterComparable()); //sort berdasarkan terpendek (1:paling pendek, 0: paling jauh)
+			
+			Collections.sort(alAllCluster, new InnerQClusterComparable()); //sort quality 
+			double sumK=0;
+			for  (int i=0;i<alAllCluster.size();i++) {
+				ClusterAgglo c = alAllCluster.get(i);
+				c.maxLevel = maxLevel;
+				pw.println("Kohesi="+c.cohesion()+" ");
+				pw.println("Clus Level="+c.level +" ");
+				pw.println("innerq="+c.innerQualityScore());
+				sumK = sumK + c.cohesion();
+				pw.println("Clus ID="+c.idCluster+" ");
+				pw.println(c.getMedoid());
+				pw.println();
+			}
+			double avgK = sumK/alAllCluster.size();
+			pw.println("Rata2 kohesi:"+avgK);
+			pw.close();
+		}//try	
+		catch(Exception e) {
+			log.severe(e.toString());
+		}
+		
+//		//tampilkan dalam bentuk hirarki
+//		try {
+//			PrintWriter pw = new PrintWriter(namaFileOutput);
+//			pw.println("<html>");
+//			pw.println("<ul>");
+//			printTreeHTML(alCluster.get(0),pw); //cluster paling atas hanya ada satu
+//			pw.println("</ul>");
+//			pw.println("</html>");
+//			pw.close();
 //		}
-//		double avgK = sumK/alAllCluster.size();
-//		System.out.println("Rata2 kohesi:"+avgK);
-		
-		
-		
-		System.out.println("<ul>");
-		printTreeHTML(alCluster.get(0)); //cluster paling atas hanya ada satu
-		System.out.println("</ul>");
+//		catch (Exception e) {
+//			log.severe(e.toString());
+//		}
 	}
 	
-	public void printTreeHTML(ClusterAgglo c) {		
+	public void printTreeHTML(ClusterAgglo c, PrintWriter pw) {		
 		
 		//print 
 //		if (c.parent!=null) {
@@ -279,20 +312,20 @@ public class AggloClusteringDB {
 //		} else {
 //			System.out.println("idParent: <none>  ROOT");
 //		}
-		System.out.println("<li>");
-		System.out.println("idcluster="+c.idCluster);
-		System.out.println(";Level"+c.level+";Kohesi="+c.cohesion()+";");
-		System.out.println(c.getMedoid());
-		System.out.println("</li>");
+		pw.println("<li>");
+		pw.println("idcluster="+c.idCluster);
+		pw.println(";Level"+c.level+";Kohesi="+c.cohesion()+";");
+		pw.println(c.getMedoid());
+		pw.println("</li>");
 		
-		//print 2 anak
+		//print  anak
 		if (c.child.size()>0)  //punya anak
 		{
-			System.out.println("<ul>");
+			pw.println("<ul>");
 			for (ClusterAgglo ch:c.child) {
-				printTreeHTML(ch);			
+				printTreeHTML(ch,pw);			
 			}
-			System.out.println("</ul>");
+			pw.println("</ul>");
 		}
 	}
 	
@@ -317,8 +350,10 @@ public class AggloClusteringDB {
 		aggC.dbName="localhost/obama2";
 		aggC.userName="yudi3";
 		aggC.password="rahasia";
-		aggC.tableNameTwJadi ="tw_jadi_sandyhoax_nodup_dukungan";
-		aggC.namaFileOut= "g:\\eksperimen\\obama\\cluster_sandy_hoax.txt";
+		aggC.tableNameTwJadi="tw_jadi";
+		aggC.tableNameTfidf = "tfidf_2000";
+		aggC.namaFileOutput = "D:\\xampp\\htdocs\\obama\\obama_2000_kohesi.htm";
+		//aggC.tableNameTwJadi ="tw_jadi_sandyhoax_nodup_dukungan";
 		aggC.process();
 	}
 }

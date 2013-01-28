@@ -11,6 +11,9 @@ public class ClusterKMeans extends Cluster {
      *
      */
 	
+		
+	
+	
 	   @Override
 	   public String toString() {
 	            StringBuilder sb = new StringBuilder();
@@ -118,6 +121,12 @@ public class ClusterKMeans extends Cluster {
                 centroid.addTerm(entry.getKey(),val);
             }
         }
+
+		@Override
+		public double innerQualityScore() {
+			// TODO Auto-generated method stub
+			return cohesion();
+		}
 
 
 } //class clusterKMeans

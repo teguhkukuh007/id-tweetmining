@@ -36,8 +36,14 @@ import java.util.Comparator;
  *
  * @author Yudi Wibisono (yudi@upi.edu)
  * Memberikan bobot kepada setiap term (rawTF*IDF) pada dokumen
+ * 
+ * input adalah tw_jadi yang sudah diprepro (gunakan ProsesTwMentahDB untuk mendapatkan tw_jadi dan selanjutnya PreproDB untuk memprepro tweet)
+ * output: table tfidf (def table ada di bawah)
+
  * tambahan:
  *   - term yg muncul di dalam  < MINFREQ  tweet akan dibuang (sekalian saat hitung idf)
+ *   
+ *   
  */
 
 
@@ -48,10 +54,11 @@ public class TfidfDb {
      public String dbName;
      public String userName;
      public String password;
-     public String tableName="tw_jadi";
+     public String tableTfidf = "tf_idf";  //table output
+     public String tableName="tw_jadi";    //table input
      
      
-     private ArrayList<String>  alExtStopWords = new ArrayList<String>();
+     //private ArrayList<String>  alExtStopWords = new ArrayList<String>();
      
      public class TermStatComparable implements Comparator<TermStat>{
 		@Override
@@ -98,13 +105,11 @@ public class TfidfDb {
       *  field yang dipreoses adalah twjadi.text_prepro
       *
       */
-     //public void process(String inputFile, String inputExtStopWords) {
+ 
     public void process() {
         Logger logger = Logger.getLogger("edu.cs.upi.TFIDF");
         logger.info("mulai");
         //loadExtStopWords(inputExtStopWords);
-        //String inputFileWoExt = inputFile.substring(0, inputFile.lastIndexOf('.')); //without ext
-        //String namaFileOutput = inputFileWoExt+"_tfidf.txt";
         Connection conn=null;       
         PreparedStatement pTw = null;
         PreparedStatement pInsertTfIdf = null;
@@ -116,7 +121,7 @@ public class TfidfDb {
             conn = DriverManager.getConnection(strCon);
             conn.setAutoCommit(false);
             
-        	//String strLine;
+
             int cc=0;
 
             HashMap<String,Integer> tweetsHaveTermCount  = new HashMap<String,Integer>();               //jumlah tweet yg mengandung sebuah term
@@ -125,9 +130,9 @@ public class TfidfDb {
             
             Integer freq;
             
-            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+tableName);
+            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+tableName+ " where is_prepro=1");
             pInsertTfIdf =
-                    conn.prepareStatement("insert into tfidf (id_internal_tw_jadi,tfidf_val)"
+                    conn.prepareStatement("insert into "+ tableTfidf + " (id_internal_tw_jadi,tfidf_val)"
                                   + "values (?,?) ");
             
             
@@ -163,20 +168,21 @@ public class TfidfDb {
             // hitung idf(i) = log (NumofTw / countTwHasTerm(i))
             HashMap<String,Double> idf = new HashMap<String,Double>();
             double jumTweet=0;
-            
             for (Map.Entry<String,Integer> entry : tweetsHaveTermCount.entrySet()) {
                 //System.out.println(entry.getKey()+"="+entry.getValue());
                 //modif, untuk term hanys satu kali muncul set idf dengan 0, sebagai mark agar term tersebut dihapus
                 jumTweet = entry.getValue();
                 String key = entry.getKey();
+                
+                
                 //hanya proses yg minimal muncul di x tweet
                 //System.out.println(key+"="+jumTweet);
                 if (jumTweet>=MINTWEET) {
-                    if (alExtStopWords.contains(entry.getKey())) {  //ada di ext stopwords, skip
-                        idf.put(key, -1.0);
-                    } else {
-                        idf.put(key, Math.log(numOfTweets/jumTweet));
-                    }
+//                    if (alExtStopWords.contains(entry.getKey())) {  //ada di ext stopwords, skip
+//                        idf.put(key, -1.0);
+//                    } else {
+                    idf.put(key, Math.log(numOfTweets/jumTweet));
+//                    }
                 } else {
                     idf.put(key, -1.0);
                 }
@@ -197,24 +203,17 @@ public class TfidfDb {
                 for (Map.Entry<String,Integer> entry : hm.entrySet()) {  //untuk term dalam satu tweet
                     key =entry.getKey();
                     idfVal = idf.get(key);
-                    if (idfVal>=0) {   //kalau < 0 artinya diskip karena jumlah tweet yg mengandung term tersbut terlalu sedikit atau ada di stopword
+                    if (idfVal>=0) {   //kalau < 0 artinya diskip karena jumlah tweet yg mengandung term tersbut terlalu sedikit
                         tfidf  = entry.getValue() * idfVal ;  //rawtf * idf
-                        
- 
                         sb.append(entry.getKey()+"="+tfidf+";");
-                        //pw.print(entry.getKey()+"="+tfidf+";");                        
-                    } //else {logger.log(Level.INFO, "kurang dari 4:{0} atau masuk ext stopwords", entry.getKey());} //debug
+                    } 
                 }
                 pInsertTfIdf.setLong(1, idInternalTw);            
                 pInsertTfIdf.setString(2, sb.toString());  
                 pInsertTfIdf.addBatch();
-               // pw.println();
             }
             pInsertTfIdf.executeBatch();
             System.out.println("selesai");
-//            br.close();
-//            in.close();
-//            pw.close();
         } catch (Exception e) {
         	e.printStackTrace();
             logger.severe(e.toString()); //ROLLBACK
@@ -237,8 +236,6 @@ public class TfidfDb {
                logger.log(Level.SEVERE, null, e);
            }    
        }
-
-
      }
     
     public void stat(String inputTFIDFFile) {
@@ -310,12 +307,13 @@ public class TfidfDb {
         t.dbName="localhost/obama2";
         t.userName="yudi3";
         t.password="rahasia";
-        t.tableName="tw_jadi_sandyhoax_nodup_dukungan";
+        t.tableName="tw_jadi";
+        t.tableTfidf="tfidf_2000";
         t.process();
         //t.process("g:\\eksperimen\\data_weka\\tw_obama.txt","g:\\eksperimen\\data_weka\\stopwords.txt");
-//        t.process("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn.txt","e:\\tweetmining\\catatan_stopwords_weight.txt");
-//        t.stat("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn_tfidf.txt");
-       //   t.stat("g:\\eksperimen\\data_weka\\tw_obama_tfidf.txt");
+        //t.process("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn.txt","e:\\tweetmining\\catatan_stopwords_weight.txt");
+        //t.stat("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn_tfidf.txt");
+       //  t.stat("g:\\eksperimen\\data_weka\\tw_obama_tfidf.txt");
      }
 /*     
 

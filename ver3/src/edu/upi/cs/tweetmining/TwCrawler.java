@@ -35,13 +35,16 @@ import java.net.URLConnection;
  *  data mentah dikumpulkan di database, tidak diproses
  *  mensimulasikan light-node, yang hanya berfungsi untuk mengumpulkan dan diproses kemudian
  *  
- *  
+ * Buat dulu database dan tabelnya (ddl-nya dibawah) 
  * Contoh menjalankan di command line, masuk ke direktori bin lalu jalankan java
  * G:\LibTweetMining2\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler
  *  
  * setelah selesai, lanjutkan dengan ProsesTwMentahDB 
  *  
- struktur tabel: yg wajib ada adalah content dan status
+ 
+ --struktur tabel
+ 
+ -- kalau ada perubahan, ganti juga di method checkcreatetable
  
  CREATE TABLE IF NOT EXISTS `tw_mentah` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
@@ -61,19 +64,8 @@ CREATE TABLE IF NOT EXISTS `crawl_log_gagal` (
 
 
 TBD, 
+- kadang kena out of memory
 - bisa dibuat lebih efisien untuk pemanggilan berulang kali? (walaupun masalah utama proses crawl dibatasi oleh limitasi API twitter)
-
-- tambah parameter, supaya lebih gampang dijalankan 
-  
-  -q query
-  -db databasename
-  -u username
-  -p password
-  -proxyhost proxyhost
-  -proxyport proxyport
-  -proxyuser usernameproxy
-  -proxypass proxypassword
-  -createtable
 
  */
 
@@ -93,7 +85,9 @@ public class TwCrawler {
    String passwordProxy="";
    
    
+   
    public  void process() {
+	    query = "q="+query; 
         Handler consoleHandler = new ConsoleHandler();
         consoleHandler.setLevel(Level.WARNING);
         logger.setLevel(Level.FINER);
@@ -202,12 +196,179 @@ public class TwCrawler {
            }
         }
     }
+   
+	private void checkCreateTable() {
+		// TODO Auto-generated method stub
+		Connection conn=null;
+		DatabaseMetaData meta=null; 
+		ResultSet res=null; 
+		Statement stmt = null;
+		try {
+	    Class.forName("com.mysql.jdbc.Driver");
+	    conn = DriverManager.getConnection("jdbc:mysql://"+dbName+"?user="+userName+"&password="+password);
+		meta = conn.getMetaData();
+		res = meta.getTables(null, null, null, new String[] {"TABLE"});
+		boolean found=false;
+		while (res.next() && !found) {
+		     found =  (res.getString("TABLE_NAME").equals(tableName));
+		}
+		stmt = conn.createStatement();
+		if (found) {
+			System.out.println("table sudah ada, lanjutkan diisi");
+		}
+		else  {
+			System.out.println("table tidak ditemukan, akan dicoba dicreate (tw_mentah & crawl_log_gagal");
+		    String sql1 = "CREATE TABLE IF NOT EXISTS `tw_mentah` ( " +
+		                   " `id_internal` bigint(20) NOT NULL AUTO_INCREMENT," +
+		                   " `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, " + 
+		                   " `content` text NOT NULL," + 
+		                   " `status` smallint(6) NOT NULL COMMENT '0: belum diproses'," + 
+		                   "  PRIMARY KEY (`id_internal`),"+
+		                   "  KEY `status` (`status`)"+
+		                   " ) DEFAULT CHARSET=utf8"; 
+		    stmt.executeUpdate(sql1);
+		    System.out.println("create table tw_mentah selesai");
+		    String sql2 = "CREATE TABLE IF NOT EXISTS `crawl_log_gagal` (" +
+	                      "`id` bigint(20) NOT NULL AUTO_INCREMENT," +
+	                      " `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, " + 
+	                      " `log_str` text NOT NULL," + 
+	                      " PRIMARY KEY (`id`)" +
+	                      " ) DEFAULT CHARSET=utf8"; 
+		    stmt.executeUpdate(sql2);
+		    System.out.println("create table crawl_log_gagal selesai");
+		}
+	   } catch (Exception e) {
+		  e.printStackTrace();
+	   } finally {
+		   try  {
+			   stmt.close();
+			   res.close();
+			   conn.close();
+		   } catch (Exception e) {
+			   e.printStackTrace();	
+		   }
+	   }
+	}
     
     public static void main(String[] args) throws InterruptedException {
-        
+    	 /* 
+    	  -q query   	  
+    	  -db databasename
+    	  -u username
+    	  -p password
+    	  -proxyhost proxyhost
+    	  -proxyport proxyport
+    	  -proxyuser usernameproxy
+    	  -proxypass proxypassword
+    	
+    	contoh:
+    	
+    	-q %28fake+OR+hoax+OR+lies+OR+conspiracy+OR+believe%29+AND+obama  -db obamarumor -u yudi3 -p rahasia -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia
+    	
+    	*
+    	*/
+    	
+    	String strQuery=""; 
+    	String strDb=""; 
+    	String strDbUser="";
+    	String strDbPass="";
+    	String strProxyHost="";
+    	String strProxyPort="";
+    	String strProxyUser="";
+    	String strProxyPass="";
+    	String strDelay="";
+    	
+    	String strParam;
+    	
+    	StringBuilder sb = new StringBuilder();
+    	for (String str:args) {
+    		sb.append(str);
+    		sb.append(" ");
+    	}
+    	
+    	strParam = sb.toString();
+    	String[] arrParam = strParam.split("-");
+    	
+    	//lebih efisien pake group regex mungkin
+    	String strLast="";
+    	for  (String par:arrParam) {
+    		try
+    		{
+	    		if (par.equals("")) continue;
+    			String[] arrDetPar = par.split(" "); 
+	    		if (arrDetPar[0].equals("q")) {
+	    			strLast="q";
+	    			strQuery = arrDetPar[1]; 
+	    		} else
+	    		if (arrDetPar[0].equals("db")) {
+	    			strLast="db";
+	    			strDb = arrDetPar[1]; 
+	    		} else
+	    		if (arrDetPar[0].equals("u")) {
+	    			strLast="u";
+	    			strDbUser = arrDetPar[1]; 	    			
+	    		} else 
+	    		if (arrDetPar[0].equals("p")) {
+	    			strLast="p";
+	    			strDbPass = arrDetPar[1];
+	    		} else
+	    		if (arrDetPar[0].equals("proxyhost")) {
+	    			strLast="proxyhost";
+	    			strProxyHost = arrDetPar[1]; 	    			
+	    		} else 
+	    		if (arrDetPar[0].equals("proxyport")) {
+	    			strLast="proxyport";
+	    			strProxyPort = arrDetPar[1]; 	    			
+		    	} else 
+		    	if (arrDetPar[0].equals("proxyuser")) {
+		    		strLast="proxyuser";
+		    	    strProxyUser = arrDetPar[1]; 	    			
+		    	} else 
+		    	if (arrDetPar[0].equals("proxypass")) {
+		    		strLast="proxypass";
+		    		strProxyPass = arrDetPar[1]; 	    			
+			    } else 
+			    	if (arrDetPar[0].equals("delay")) {
+			    		strLast="delay";
+			    		strDelay = arrDetPar[1]; 	    			
+				    }
+		    	else 
+	    		{
+	    			//parameter tidak dikenal
+	    			System.out.println("Error parameter tdk dikenal : "+par);
+	    		}
+    		}
+    		catch (Exception e) {
+    			System.out.println("parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:");
+    			System.out.println("-q query -db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik -proxyhost proxyhost -proxyport proxyport -proxyuser usernameproxy -proxypass proxypassword");
+    			System.out.println("Contoh:");
+    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q %28fake+OR+hoax+OR+lies+OR+conspiracy+OR+believe%29+AND+obama -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");
+    			System.exit(1);
+    		}
+    	}
+    	
+    	if (strQuery.equals("") || strDb.equals("") || strDbUser.equals("") || strDbPass.equals("")) {
+    		System.out.println("parameter tidak lengkap q, db, dbuser dan dpass harus ada! Gunakan parameter dengan format:");
+    		System.out.println("-q query -db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik -proxyhost proxyhost -proxyport proxyport -proxyuser usernameproxy -proxypass proxypassword");
+			System.out.println("Contoh:");
+			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q %28fake+OR+hoax+OR+lies+OR+conspiracy+OR+believe%29+AND+obama -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");			
+			System.exit(1);
+    	}
+    	
+    	
+    	System.out.println("q-->"+strQuery);
+    	System.out.println("db-->"+strDb);
+    	System.out.println("dbuser-->"+strDbUser);
+    	System.out.println("dbpass-->"+strDbPass);
+    	System.out.println("delay-->"+strDelay);
+    	System.out.println("proxhost-->"+strProxyHost);
+    	System.out.println("proxport-->"+strProxyPort);
+    	System.out.println("proxuser-->"+strProxyUser);
+    	System.out.println("proxpass-->"+strProxyPass);
+    	
     	
     	//testing    	
-    	TwCrawler tw = new TwCrawler();
+//    	TwCrawler tw = new TwCrawler();
 //    	tw.proxyHost ="cache.itb.ac.id";
 //    	tw.proxyPort ="8080";
 //    	tw.userNameProxy ="yudi.wibisono";
@@ -216,13 +377,22 @@ public class TwCrawler {
 //    	tw.userName = "yudi3";
 //    	tw.password = "rahasia";
 //    	tw.query="q=indosat%20OR%20telkomsel&include_entities=true&result_type=recent";
+
+ 
+    	TwCrawler tw = new TwCrawler();
     	
-    	tw.dbName = "localhost/obama";
-    	tw.userName = "yudi3";
-    	tw.password = "rahasia";
-    	tw.query="q=obama&include_entities=true&result_type=recent";
-    	
+    	tw.dbName = strDb;
+    	tw.userName = strDbUser;
+    	tw.password = strDbPass;
+    	tw.query=strQuery;
     	tw.tableName = "tw_mentah";
+    	tw.proxyHost =strProxyHost;
+    	tw.proxyPort =strProxyPort;
+    	tw.userNameProxy =strProxyUser;
+    	tw.passwordProxy =strProxyPass;
+    	int delay = Integer.parseInt(strDelay); //delay antar query dalam detik
+    	tw.checkCreateTable();
+    	
     	
     	
     	for (int i=0; i<=10000 ; i++) {
@@ -234,14 +404,18 @@ public class TwCrawler {
                 System.exit(1);
             } else {
                 //int jumTidurInMin = 5;
-            	System.out.println("Selesai, tidur dulu "); 
-            	Thread.sleep(10000);
+            	System.out.println("Selesai, tidur dulu "+delay+" detik"); 
+            	Thread.sleep(delay*1000); 
                 //System.out.println("Selesai, tidur dulu "+ jumTidurInMin+ " menit, setelah menyelesaikan iterasi ke "+i);          
                 //Thread.sleep(jumTidurInMin * 60000);
             }
         }
     	System.out.println("Selesai semua!");
+    	
     }
+
+
+    
 }
 
 

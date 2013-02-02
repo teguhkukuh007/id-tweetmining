@@ -73,6 +73,16 @@ public class AggloClusteringDB {
         	return (coh1>coh2 ? -1 : (coh1==coh2 ? 0 : 1));
         }
     }
+    
+    //berdasarkan level
+    public class LevelClusterComparable implements Comparator<ClusterAgglo>{
+        @Override
+        public int compare(ClusterAgglo o1, ClusterAgglo o2) {
+            double coh1 = o1.level;     
+            double coh2 = o2.level;
+        	return (coh1<coh2 ? -1 : (coh1==coh2 ? 0 : 1));
+        }
+    }
 
     
     private ArrayList<ClusterAgglo> alAllCluster = new ArrayList<ClusterAgglo>();  //semua cluster dalam tree
@@ -162,6 +172,7 @@ public class AggloClusteringDB {
 			c.addDoc(t);
 			c.calcCentroid();
 			c.level = level;
+			c.maxLevel = maxLevel;
 	        alCluster.add(c);
 	        alAllCluster.add(c);
 		}
@@ -218,6 +229,7 @@ public class AggloClusteringDB {
 					cb.flag = true;
 					ClusterAgglo cGab = new ClusterAgglo(incID*1000+ca.idCluster);
 					cGab.level = level;
+					cGab.maxLevel = maxLevel;
 					cGab.mergeCluster(ca);
 					cGab.mergeCluster(cb);  
 					cGab.calcCentroid();
@@ -267,12 +279,11 @@ public class AggloClusteringDB {
 		try {
 			PrintWriter pw = new PrintWriter(namaFileOutput);
 			//Collections.sort(alAllCluster, new CohesionClusterComparable()); //sort berdasarkan terpendek (1:paling pendek, 0: paling jauh)
-			
-			Collections.sort(alAllCluster, new InnerQClusterComparable()); //sort quality 
+			//Collections.sort(alAllCluster, new InnerQClusterComparable()); //sort quality 
+			Collections.sort(alAllCluster, new LevelClusterComparable()); //sort quality 
 			double sumK=0;
 			for  (int i=0;i<alAllCluster.size();i++) {
 				ClusterAgglo c = alAllCluster.get(i);
-				c.maxLevel = maxLevel;
 				pw.println("Kohesi="+c.cohesion()+" ");
 				pw.println("Clus Level="+c.level +" ");
 				pw.println("innerq="+c.innerQualityScore());
@@ -286,8 +297,10 @@ public class AggloClusteringDB {
 			pw.close();
 		}//try	
 		catch(Exception e) {
+			e.printStackTrace();
 			log.severe(e.toString());
 		}
+		System.out.println("Seesai");
 		
 //		//tampilkan dalam bentuk hirarki
 //		try {
@@ -352,7 +365,7 @@ public class AggloClusteringDB {
 		aggC.password="rahasia";
 		aggC.tableNameTwJadi="tw_jadi";
 		aggC.tableNameTfidf = "tfidf_2000";
-		aggC.namaFileOutput = "D:\\xampp\\htdocs\\obama\\obama_2000_kohesi.htm";
+		aggC.namaFileOutput = "D:\\xampp\\htdocs\\obama\\obama_2000_level.txt";
 		//aggC.tableNameTwJadi ="tw_jadi_sandyhoax_nodup_dukungan";
 		aggC.process();
 	}

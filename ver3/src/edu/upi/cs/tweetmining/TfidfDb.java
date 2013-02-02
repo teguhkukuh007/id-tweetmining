@@ -133,7 +133,7 @@ public class TfidfDb {
             pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+tableName+ " where is_prepro=1");
             pInsertTfIdf =
                     conn.prepareStatement("insert into "+ tableTfidf + " (id_internal_tw_jadi,tfidf_val)"
-                                  + "values (?,?) ");
+                                        + "values (?,?) ");
             
             
             ResultSet rsTw = pTw.executeQuery();
@@ -204,7 +204,7 @@ public class TfidfDb {
                     key =entry.getKey();
                     idfVal = idf.get(key);
                     if (idfVal>=0) {   //kalau < 0 artinya diskip karena jumlah tweet yg mengandung term tersbut terlalu sedikit
-                        tfidf  = entry.getValue() * idfVal ;  //rawtf * idf
+                        tfidf  = entry.getValue() * idfVal ;     //rawtf * idf
                         sb.append(entry.getKey()+"="+tfidf+";");
                     } 
                 }

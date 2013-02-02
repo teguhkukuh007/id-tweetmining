@@ -355,6 +355,8 @@ public class TwCrawler {
 			System.exit(1);
     	}
     	
+    	if (strDelay.equals("")) {
+    		strDelay = "60";}
     	
     	System.out.println("q-->"+strQuery);
     	System.out.println("db-->"+strDb);

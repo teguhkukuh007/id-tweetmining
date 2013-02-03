@@ -32,19 +32,40 @@ import java.net.URL;
 import java.net.URLConnection;
 
 /**
- *  data mentah dikumpulkan di database, tidak diproses
- *  mensimulasikan light-node, yang hanya berfungsi untuk mengumpulkan dan diproses kemudian
+ * yudi@upi.edu
+ * 
+ * data mentah dikumpulkan di database, tidak diproses
+ * mensimulasikan light-node, yang hanya berfungsi untuk mengumpulkan dan diproses kemudian
  *  
- * Buat dulu database dan tabelnya (ddl-nya dibawah) 
- * Contoh menjalankan di command line, masuk ke direktori bin lalu jalankan java
- * G:\LibTweetMining2\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler
+ * Buat dulu database (utf-8), tabel akan dicreate ototmatis
+ * 
+ * parameter:
+ 
+      	  harus ada:
+      	  
+          -q query   	  
+    	  -db databasename
+    	  -u username
+    	  -p password
+    	  -delay delay_dalam_detik
+    	  
+    	   opsional:
+    	   
+    	  -proxyhost proxyhost   
+    	  -proxyport proxyport
+    	  -proxyuser usernameproxy
+    	  -proxypass proxypassword
  *  
+ * Contoh menjalankan di command line, 
+ * G:\LibTweetMining2\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q %28fake+OR+hoax+OR+lies+OR+conspiracy+OR+believe%29+AND+obama -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");  
+ * 
+ * jangan lupa kalau di windows dan buat .bat file, escape char untuk % adalah %% dan untuk  & adalah ^&
  * setelah selesai, lanjutkan dengan ProsesTwMentahDB 
  *  
  
  --struktur tabel
  
- -- kalau ada perubahan, ganti juga di method checkcreatetable
+ -- note untuk dev kalau ada perubahan, ganti juga di method checkcreatetable
  
  CREATE TABLE IF NOT EXISTS `tw_mentah` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
@@ -182,7 +203,7 @@ public class TwCrawler {
 				pErr.executeUpdate();
 			} catch (SQLException e1) {
 				logger.log(Level.SEVERE, null, e1);
-				isError = true;
+				isError = true;  //fatal error tdk bisa masukkan data ke DB, abort
 			}
         }
         finally  {
@@ -256,6 +277,7 @@ public class TwCrawler {
     	  -db databasename
     	  -u username
     	  -p password
+    	  -delay delay_dalam_detik
     	  -proxyhost proxyhost
     	  -proxyport proxyport
     	  -proxyuser usernameproxy
@@ -342,7 +364,7 @@ public class TwCrawler {
     			System.out.println("parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:");
     			System.out.println("-q query -db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik -proxyhost proxyhost -proxyport proxyport -proxyuser usernameproxy -proxypass proxypassword");
     			System.out.println("Contoh:");
-    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q %28fake+OR+hoax+OR+lies+OR+conspiracy+OR+believe%29+AND+obama -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");
+    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q obama&include_entities=true&result_type=recent -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");
     			System.exit(1);
     		}
     	}
@@ -351,7 +373,7 @@ public class TwCrawler {
     		System.out.println("parameter tidak lengkap q, db, dbuser dan dpass harus ada! Gunakan parameter dengan format:");
     		System.out.println("-q query -db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik -proxyhost proxyhost -proxyport proxyport -proxyuser usernameproxy -proxypass proxypassword");
 			System.out.println("Contoh:");
-			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q %28fake+OR+hoax+OR+lies+OR+conspiracy+OR+believe%29+AND+obama -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");			
+			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar edu.upi.cs.tweetmining.TwCrawler -q obama&include_entities=true&result_type=recent -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -proxyhost cache.itb.ac.id -proxyport 8080 -proxyuser yudiwbs -proxypass rahasia");			
 			System.exit(1);
     	}
     	
@@ -397,7 +419,7 @@ public class TwCrawler {
     	
     	
     	
-    	for (int i=0; i<=10000 ; i++) {
+    	for (int i=0; i<=100000 ; i++) {
             System.out.println("Proses ke---------------------------------->"+i);
             tw.process();
             //sleep menit

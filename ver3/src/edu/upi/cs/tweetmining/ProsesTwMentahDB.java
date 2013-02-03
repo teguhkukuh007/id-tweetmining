@@ -21,8 +21,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Handler;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jackson.JsonFactory;
@@ -35,20 +34,36 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- *
+ * yudi@upi.edu
  * @yudiwbs
  * 
  * memproses twitter mentah yang sudah dikumpulkan di database ke dalam field-field yang lebih terstuktur
- * struktur tabelnya ada di file ini (paling bawah sekali, dibawah code) jangan lupa disesuaikan dulu nama tabelnya
+ * struktur tabelnya ada di file ini (paling bawah sekali, dibawah code atau di web di: http://pastebin.com/VfvxNFxu) 
  * dupilikasi tweet (id sama) juga dideteksi
  * 
- * lihat method main() untuk demonya
+ *  parameter:
+ 
+      	  harus ada:
+      	  
+          -q query   	  
+    	  -db databasename
+    	  -u username
+    	  -p password
+    	  -delay delay_dalam_detik
+    	  
+ * 
+ * Contoh commandline: G:\LibTweetMining2\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.ProsesTwMentahDB -db localhost/obamarumor -u yudi3 -p rahasia -delay 10
  * 
  * Gunakan class TwCrawler untuk mengumpulkan tweet mentah
  * 
+ * 
+ * 
+ * 
+ * 
  */
 public class ProsesTwMentahDB{
-    public String dbName;
+	static boolean isError = false;  //error yang fatal
+	public String dbName;
     public String userName;
     public String password;
     public String tabelTweetJadi;
@@ -78,7 +93,7 @@ public class ProsesTwMentahDB{
     	  SimpleDateFormat sf = new SimpleDateFormat(TWITTER,Locale.ENGLISH);;
     	  sf.setLenient(true);
     	  dt = sf.parse(date);
-    	  System.out.println("tgl="+dt);
+    	  //System.out.println("tgl="+dt);
     	  Calendar cal = Calendar.getInstance(); // creates calendar
     	  cal.setTime(dt);                       // sets calendar time/date
     	  //cal.add(Calendar.HOUR,7);            // tadinya tambah 7  jam untuk jadi WIB, ternyat sudah otomatis     	  
@@ -126,7 +141,7 @@ public class ProsesTwMentahDB{
             texttw=hmRes.get("text");
             if ((texttw.length()) >= 300 ) {
             	//terlalu panjang (misal mengandung karakter spt &gt terlalu banyak, skip saja
-            	System.out.println("tweet terlalu panjang, skip");
+            	//System.out.println("tweet terlalu panjang, skip");
             	return;
             }
             
@@ -171,7 +186,7 @@ public class ProsesTwMentahDB{
             generatedKeys = pInsertTw.getGeneratedKeys();
             if (generatedKeys.next()) {
                 long idTwJadi = generatedKeys.getLong(1);
-                System.out.println("key------------------>"+idTwJadi);
+                //System.out.println("key------------------>"+idTwJadi);
                 //masuken ke tabel mention,hashtag,url
                 //mention
                 //1 id_internal_tw_jadi,2 screen_name,3 name,4 user_id
@@ -187,7 +202,7 @@ public class ProsesTwMentahDB{
                 pInsertMen.executeBatch();
                 
                 for (HashMap<String,String> hmUrl: arrUrl) {
-                    printHashMap(hmUrl);
+                    //printHashMap(hmUrl);
                     pInsertUrl.setLong(1,idTwJadi);
                     pInsertUrl.setString(2,hmUrl.get("url"));
                     pInsertUrl.setString(3,hmUrl.get("expanded_url"));
@@ -215,7 +230,7 @@ public class ProsesTwMentahDB{
                     pInsertMedia.setString(6,hmMedia.get("display_url"));
                     pInsertMedia.setString(7,hmMedia.get("expanded_url"));
                     pInsertMedia.setString(8,hmMedia.get("type"));
-                    System.out.println(pInsertMedia.toString());
+                    //System.out.println(pInsertMedia.toString());
                     pInsertMedia.addBatch();
                 }   
                 pInsertMedia.executeBatch();
@@ -237,17 +252,22 @@ public class ProsesTwMentahDB{
     private PreparedStatement pFlagTwMentah;
     
     public  void process() {
+    	
+       jumDuplikasi=0;
+       jumMasuk=0;
+       jumDiproses=0;
+    	
        Connection conn=null;       
        PreparedStatement pTw = null;
        try {
            Class.forName("com.mysql.jdbc.Driver");
            
            String strCon = "jdbc:mysql://"+dbName+"?user="+userName+"&password="+password;
-           System.out.println(strCon);
+           //System.out.println(strCon);
            conn = DriverManager.getConnection(strCon);
            conn.setAutoCommit(false);
            
-           pTw  =  conn.prepareStatement ("select id_internal,content from "+ tabelTweetMentah +" where status = 0");   
+           pTw  =  conn.prepareStatement ("select id_internal,content from "+ tabelTweetMentah +" where status = 0 limit 2000");   
            
            pInsertTw = 
                    conn.prepareStatement("insert into "+ tabelTweetJadi + " (text,id,id_internal_tw_mentah,created_at,from_user,from_user_id,from_user_name,profile_image_url,profile_image_url_https,source,location,iso_language_code,to_user,to_user_id,to_user_name,in_reply_to_status_id,geo_lat,geo_long,geo_type,created_at_wib)"
@@ -275,7 +295,7 @@ public class ProsesTwMentahDB{
            
            while ( rsTw.next())  {
                long idTwMentah = rsTw.getLong(1);
-               System.out.println("===================================================>Proses ID ke: "+idTwMentah);
+               System.out.println("===================================================>Proses ID (tw_mentah) ke: "+idTwMentah);
                String strTw= rsTw.getString(2);
                
             //cek apakah diakhiri dengan karakter "}", kalau TIDAK artinya JSON tidak valid, harus diskip
@@ -296,7 +316,7 @@ public class ProsesTwMentahDB{
              }
                
                
-               System.out.println(strTw);
+               //System.out.println(strTw);
                //proses
                JsonParser jp = f.createJsonParser(strTw);
                if (jp.nextToken() != JsonToken.START_OBJECT) {
@@ -316,10 +336,10 @@ public class ProsesTwMentahDB{
                    if (fieldName.equals("results")) {
                    
                        jp.nextToken(); //start_arr
-                       System.out.println("masuk results");
+                       //System.out.println("masuk results");
                        while (jp.nextToken() != JsonToken.END_ARRAY) {        //end array result (satu result terdiri dari array objek tweet)
-                           System.out.println("Proses Tweet==========================================>");
-                           System.out.println("idTwMentah:"+idTwMentah);
+//                           System.out.println("Proses Tweet==========================================>");
+//                           System.out.println("idTwMentah:"+idTwMentah);
                            ArrayList<HashMap<String,String>> arrMen = new ArrayList<HashMap<String,String>>();
                            ArrayList<HashMap<String,String>> arrUrl = new ArrayList<HashMap<String,String>>();
                            ArrayList<HashMap<String,String>> arrHt  = new ArrayList<HashMap<String,String>>();
@@ -328,12 +348,12 @@ public class ProsesTwMentahDB{
                            while (jp.nextToken() != JsonToken.END_OBJECT) {   //object setiap tweet di dalam result
                                String fieldNameRes = jp.getCurrentName();
                                if (fieldNameRes.equals("entities")) {
-                                   System.out.println("masuk entities");
+                                   //System.out.println("masuk entities");
                                    jp.nextToken(); //start_obj
                                    while (jp.nextToken() != JsonToken.END_OBJECT) {  //END OF ENTITIES
                                            String fieldNameEnt = jp.getCurrentName();                                       
                                            if (fieldNameEnt.equals("media"))  {
-                                               System.out.println("masuk media");
+                                               //System.out.println("masuk media");
                                                jp.nextToken(); //start array
                                                while (jp.nextToken() != JsonToken.END_ARRAY) {
                                                     System.out.println("med#");
@@ -344,7 +364,7 @@ public class ProsesTwMentahDB{
                                                             while (jp.nextToken() != JsonToken.END_ARRAY) { } // skip dulu
                                                          } else
                                                          if (fieldNameMed.equals("sizes")) {
-                                                             System.out.println("masuk sizes");
+                                                             //System.out.println("masuk sizes");
                                                              boolean stop = false;
                                                              int cc=0;
                                                              StringBuilder sb = new StringBuilder();
@@ -362,12 +382,12 @@ public class ProsesTwMentahDB{
                                                                  }
                                                              }
                                                              hmKeyValMedia.put("sizes",sb.toString());
-                                                             System.out.println("Media--> Sizes ="+sb.toString());                                                             
+                                                             //System.out.println("Media--> Sizes ="+sb.toString());                                                             
                                                          }
                                                          else {
                                                              jp.nextToken();// Let's move to value
                                                              valText = jp.getText();
-                                                             System.out.println("Media-->"+fieldNameMed+"="+valText);
+                                                             //System.out.println("Media-->"+fieldNameMed+"="+valText);
                                                              hmKeyValMedia.put(fieldNameMed,valText);
                                                          }
                                                      }
@@ -386,7 +406,7 @@ public class ProsesTwMentahDB{
                                                          } else {
                                                              jp.nextToken();// Let's move to value
                                                              valText = jp.getText();
-                                                             System.out.println("hashtag-->"+fieldNameHt+"="+valText);
+                                                             //System.out.println("hashtag-->"+fieldNameHt+"="+valText);
                                                              hmKeyValHashtag.put(fieldNameHt,valText);
                                                          }
                                                     }
@@ -404,7 +424,7 @@ public class ProsesTwMentahDB{
                                                          } else {
                                                              jp.nextToken();// Let's move to value
                                                              valText = jp.getText();
-                                                             System.out.println("url-->"+fieldNameUrl+"="+valText);
+                                                             //System.out.println("url-->"+fieldNameUrl+"="+valText);
                                                              hmKeyValUrl.put(fieldNameUrl,valText);
                                                          }
                                                      }
@@ -414,7 +434,7 @@ public class ProsesTwMentahDB{
                                            else 
                                            if (fieldNameEnt.equals("user_mentions")) { 
                                                jp.nextToken(); //start array
-                                               System.out.println("masuk user mention");
+                                               //System.out.println("masuk user mention");
                                                while (jp.nextToken() != JsonToken.END_ARRAY) {  // END ARRAY USER MENTION
                                                    HashMap<String,String> hmKeyValMen = new HashMap<String,String>(); //mention 
                                                    while (jp.nextToken() != JsonToken.END_OBJECT) { 
@@ -424,7 +444,7 @@ public class ProsesTwMentahDB{
                                                         } else {
                                                             jp.nextToken();// Let's move to value
                                                             valText = jp.getText();
-                                                            System.out.println("men-->"+fieldNameMen+"="+valText);
+                                                            //System.out.println("men-->"+fieldNameMen+"="+valText);
                                                             hmKeyValMen.put(fieldNameMen,valText);
                                                         }
                                                     }
@@ -434,14 +454,14 @@ public class ProsesTwMentahDB{
                                            else  { //di dalam enties, selain user mention,url, hashtag
                                                jp.nextToken();// Let's move to value
                                                valText = jp.getText();
-                                               System.out.println("entities->"+fieldName+"="+valText);
+                                               //System.out.println("entities->"+fieldName+"="+valText);
                                                //tidak ada yg lain
                                                
                                            }
                                     } //end of entities
                                     } else { //di dalam resulsts selain user entities
                                     if (fieldNameRes.equals("geo")) {
-                                       System.out.println("masuk geo");
+                                       //System.out.println("masuk geo");
                                        jp.nextToken(); //start_obj
                                        String tempStr = jp.getText();
                                        if (!tempStr.equals("null")) {
@@ -454,26 +474,26 @@ public class ProsesTwMentahDB{
                                                   jp.nextToken();
                                                   String geoLong = jp.getText();
                                                   jp.nextToken();
-                                                  System.out.println("geo-->koordinat geo:"+geoLat+","+geoLong);
+                                                 // System.out.println("geo-->koordinat geo:"+geoLat+","+geoLong);
                                                   hmKeyValRes.put("geo_lat",geoLat);
                                                   hmKeyValRes.put("geo_long",geoLong);
                                               } else {
                                                     jp.nextToken();// Let's move to value
                                                     valText = jp.getText();
-                                                    System.out.println("geo-->"+fieldNameGeo+"="+valText);
+                                                   // System.out.println("geo-->"+fieldNameGeo+"="+valText);
                                                     hmKeyValRes.put(fieldNameGeo,valText);
                                               }  
                                            } //while
                                        }
                                     } else
                                     if (fieldNameRes.equals("metadata")) {
-                                               System.out.println("masuk metadat");
+                                               //System.out.println("masuk metadat");
                                                jp.nextToken(); //start_obj
                                                while (jp.nextToken() != JsonToken.END_OBJECT) {} //skip metadata
                                     } else  {
                                                jp.nextToken();
                                                valText = jp.getText(); 
-                                               System.out.println("res->"+fieldNameRes+"="+valText);
+                                               //System.out.println("res->"+fieldNameRes+"="+valText);
                                                hmKeyValRes.put(fieldNameRes,valText);
                                     }
                                     }  //else
@@ -492,7 +512,7 @@ public class ProsesTwMentahDB{
                        //masukan pasangan field val
                        jp.nextToken();// Let's move to value
                        valText = jp.getText();
-                       System.out.println("root->"+fieldName+"="+valText);
+                       //System.out.println("root->"+fieldName+"="+valText);
                        hmKeyValRoot.put(fieldName,valText);
                    }    
                }  //end OBJ ROOT
@@ -511,6 +531,7 @@ public class ProsesTwMentahDB{
 					logger.log(Level.SEVERE, null, e1);   
 				}
                System.out.println("Connection rollback...");
+               isError = true;
            }
        }   
        finally {
@@ -527,31 +548,91 @@ public class ProsesTwMentahDB{
                conn.close();
            } catch (Exception e) {
                logger.log(Level.SEVERE, null, e);
+               isError = true;
            }    
        }
     }
     
     
     public static void main(String[] args) {
-        //testing
+    	
+    	//proses param 
+    	String strDb=""; 
+    	String strDbUser="";
+    	String strDbPass="";
+    	String strDelay="";
+    	
+    	String strParam;
+    	
+    	StringBuilder sb = new StringBuilder();
+    	for (String str:args) {
+    		sb.append(str);
+    		sb.append(" ");
+    	}
+    	
+    	strParam = sb.toString();
+    	String[] arrParam = strParam.split("-");
+    	
+    	//lebih efisien pake group regex mungkin
+    	String strLast="";
+    	for  (String par:arrParam) {
+    		try
+    		{
+	    		if (par.equals("")) continue;
+    			String[] arrDetPar = par.split(" "); 
+	    		if (arrDetPar[0].equals("db")) {
+	    			strLast="db";
+	    			strDb = arrDetPar[1]; 
+	    		} else
+	    		if (arrDetPar[0].equals("u")) {
+	    			strLast="u";
+	    			strDbUser = arrDetPar[1]; 	    			
+	    		} else 
+	    		if (arrDetPar[0].equals("p")) {
+	    			strLast="p";
+	    			strDbPass = arrDetPar[1];
+	    		} else
+			    if (arrDetPar[0].equals("delay")) {
+			    		strLast="delay";
+			    		strDelay = arrDetPar[1]; 	    			
+				}
+		    	else 
+	    		{
+	    			//parameter tidak dikenal
+	    			System.out.println("Error parameter tdk dikenal : "+par);
+	    		}
+    		}
+    		catch (Exception e) {
+    			System.out.println("parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:");
+    			System.out.println("-db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik");
+    			System.out.println("Contoh:");
+    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.ProsesTwMentahDB -db localhost/obamarumor -u yudi3 -p rahasia -delay 10");
+    			System.exit(1);
+    		}
+    	}
+    	
+    	if (strDb.equals("") || strDbUser.equals("") || strDbPass.equals("")) {
+    		System.out.println("parameter tidak lengkap db, dbuser dan dpass harus ada! Gunakan parameter dengan format:");
+    		System.out.println("-db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik");
+			System.out.println("Contoh:");
+			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.ProsesTwMentahDB -db localhost/obamarumor -u yudi3 -p rahasia -delay 10");
+    		System.exit(1);
+    	}
+    	
+    	if (strDelay.equals("")) {
+    		strDelay = "60";}
+    	
+    	System.out.println("db-->"+strDb);
+    	System.out.println("dbuser-->"+strDbUser);
+    	System.out.println("dbpass-->"+strDbPass);
+    	System.out.println("delay-->"+strDelay);
+    	System.out.println("Struktur DB yang harus disiapkan dapat dilihat di: http://pastebin.com/VfvxNFxu ");
+    	
     	ProsesTwMentahDB ptm = new ProsesTwMentahDB();
     	
-    	
-//    	ptm.dbName = "localhost/indosattelkomsel";
-//    	ptm.userName = "yudi3";
-//    	ptm.password = "rahasia";
-
-    	
-    	
-    	
-//    	ptm.dbName = "localhost/masterchef2";
-//    	ptm.userName = "yudi3";
-//    	ptm.password = "rahasia";
-    	
-    	ptm.dbName = "localhost/obama2";
-    	ptm.userName = "yudi3";
-    	ptm.password = "rahasia";
-    	
+    	ptm.dbName = strDb;
+    	ptm.userName = strDbUser;
+    	ptm.password = strDbPass;
     	
     	ptm.tabelTweetJadi = "tw_jadi";
     	ptm.tabelUserMention ="user_mention";
@@ -560,12 +641,46 @@ public class ProsesTwMentahDB{
     	ptm.tabelHashTag = "hashtag";
     	ptm.tabelTweetMentah = "tw_mentah";
     	
-    	ptm.process();
-        System.out.println("Jum masuk="+ptm.jumMasuk);
-        System.out.println("Jum duplikasi="+ptm.jumDuplikasi);
-        double rasio = 100 * (double) ptm.jumMasuk/(ptm.jumMasuk+ptm.jumDuplikasi);
-        System.out.println("Rasio data yg masuk (pct)="+rasio+"%");  //makin tinggi artinya kurang cepat/kurang banyak mengambil
-        System.out.println("");
+    	int delay = Integer.parseInt(strDelay); //delay antar query dalam detik
+    	
+    	for (int i=0; i<=100000 ; i++) {
+            System.out.println("Proses ke---------------------------------->"+i);
+            ptm.process();
+            
+            System.out.println("Jum masuk="+ptm.jumMasuk);
+            System.out.println("Jum duplikasi="+ptm.jumDuplikasi);
+            double rasio = 100 * (double) ptm.jumMasuk/(ptm.jumMasuk+ptm.jumDuplikasi);
+            System.out.println("Rasio data yg masuk (pct)="+rasio+"%");  //makin tinggi artinya kurang cepat/kurang banyak mengambil, makin kecil berarti delay terlalu pendek
+            System.out.println("");
+            
+            if (isError) {
+                System.out.println("Terjadi kesalahan fatal (database), distop");
+                System.exit(1);
+            } else {
+                //int jumTidurInMin = 5;
+            	System.out.println("Selesai, tidur dulu "+delay+" detik"); 
+            	try {
+					Thread.sleep(delay*1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					System.out.println("thread sleep error");
+					e.printStackTrace();
+				} 
+            }
+        }
+    	System.out.println("Selesai semua!");
+	
+//    	ptm.dbName = "localhost/indosattelkomsel";
+//    	ptm.userName = "yudi3";
+//    	ptm.password = "rahasia";
+
+//    	ptm.dbName = "localhost/masterchef2";
+//    	ptm.userName = "yudi3";
+//    	ptm.password = "rahasia";
+
+    	//ptm.process();
+    	
+        
     }
     
     
@@ -789,10 +904,6 @@ CREATE TABLE IF NOT EXISTS `tw_jadi_flag_duplicate` (
 -- Data exporting was unselected.
 
 
-
-
-
--- Dumping structure for table indosat1.tw_stat_per_jam
 CREATE TABLE IF NOT EXISTS `tw_stat_per_jam` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id_stat_per_jam` bigint(20) NOT NULL DEFAULT '0',
@@ -805,7 +916,7 @@ CREATE TABLE IF NOT EXISTS `tw_stat_per_jam` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.url
+
 CREATE TABLE IF NOT EXISTS `url` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id_internal_tw_jadi` bigint(20) NOT NULL,
@@ -819,7 +930,6 @@ CREATE TABLE IF NOT EXISTS `url` (
 -- Data exporting was unselected.
 
 
--- Dumping structure for table indosat1.user_mention
 CREATE TABLE IF NOT EXISTS `user_mention` (
   `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
   `id_internal_tw_jadi` bigint(20) NOT NULL,

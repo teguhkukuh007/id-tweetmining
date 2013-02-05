@@ -34,8 +34,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * yudi@upi.edu
- * @yudiwbs
+ * @author Yudi Wibisono (yudi@upi.edu)
  * 
  * memproses twitter mentah yang sudah dikumpulkan di database ke dalam field-field yang lebih terstuktur
  * struktur tabelnya ada di file ini (paling bawah sekali, dibawah code atau di web di: http://pastebin.com/VfvxNFxu) 
@@ -295,7 +294,7 @@ public class ProsesTwMentahDB{
            
            while ( rsTw.next())  {
                long idTwMentah = rsTw.getLong(1);
-               System.out.println("===================================================>Proses ID (tw_mentah) ke: "+idTwMentah);
+               System.out.println("================>Proses ID (tw_mentah) ke: "+idTwMentah);
                String strTw= rsTw.getString(2);
                
             //cek apakah diakhiri dengan karakter "}", kalau TIDAK artinya JSON tidak valid, harus diskip
@@ -356,7 +355,7 @@ public class ProsesTwMentahDB{
                                                //System.out.println("masuk media");
                                                jp.nextToken(); //start array
                                                while (jp.nextToken() != JsonToken.END_ARRAY) {
-                                                    System.out.println("med#");
+                                                    //System.out.println("med#");
                                                     HashMap<String,String> hmKeyValMedia = new HashMap<String,String>();
                                                     while (jp.nextToken() != JsonToken.END_OBJECT) {
                                                          String fieldNameMed = jp.getCurrentName();
@@ -643,6 +642,8 @@ public class ProsesTwMentahDB{
     	
     	int delay = Integer.parseInt(strDelay); //delay antar query dalam detik
     	
+    	int jumEventDupTinggi = 0; //jumlah kejadian dimana duplikasi melebihi 75%
+    	
     	for (int i=0; i<=100000 ; i++) {
             System.out.println("Proses ke---------------------------------->"+i);
             ptm.process();
@@ -651,6 +652,12 @@ public class ProsesTwMentahDB{
             System.out.println("Jum duplikasi="+ptm.jumDuplikasi);
             double rasio = 100 * (double) ptm.jumMasuk/(ptm.jumMasuk+ptm.jumDuplikasi);
             System.out.println("Rasio data yg masuk (pct)="+rasio+"%");  //makin tinggi artinya kurang cepat/kurang banyak mengambil, makin kecil berarti delay terlalu pendek
+            
+            if (rasio>75) {
+            	jumEventDupTinggi++; 
+            }
+            double jumEventDupRasio = 100 * (double) jumEventDupTinggi/(i+1);
+            System.out.println("persentase jumlah kejadian duplikasi >75%:    "+jumEventDupRasio);
             System.out.println("");
             
             if (isError) {

@@ -92,7 +92,8 @@ TBD,
 
 public class TwCrawler {
    private static final Logger logger = Logger.getLogger("Crawler");
-   static boolean isError = false;  
+   static boolean isError = false;  //fatal error
+   boolean isCrawlError = false;
    public String dbName;           //  format: localhost/mydbname
    public String userName;
    public String password;
@@ -116,7 +117,7 @@ public class TwCrawler {
         logger.fine("mulai");
         //log.log(Level.FINE,"msg","mulai");
         System.out.println("Ambil tweet mentah dan masuk ke DB");
-        
+        isCrawlError = false;
         if (!proxyHost.equals(""))
         {
 	        System.setProperty("http.proxyHost",proxyHost) ;  
@@ -201,6 +202,7 @@ public class TwCrawler {
             try {
 				pErr.setString(1,e.toString());
 				pErr.executeUpdate();
+				isCrawlError = true;
 			} catch (SQLException e1) {
 				logger.log(Level.SEVERE, null, e1);
 				isError = true;  //fatal error tdk bisa masukkan data ke DB, abort
@@ -225,38 +227,38 @@ public class TwCrawler {
 		ResultSet res=null; 
 		Statement stmt = null;
 		try {
-	    Class.forName("com.mysql.jdbc.Driver");
-	    conn = DriverManager.getConnection("jdbc:mysql://"+dbName+"?user="+userName+"&password="+password);
-		meta = conn.getMetaData();
-		res = meta.getTables(null, null, null, new String[] {"TABLE"});
-		boolean found=false;
-		while (res.next() && !found) {
-		     found =  (res.getString("TABLE_NAME").equals(tableName));
-		}
-		stmt = conn.createStatement();
-		if (found) {
-			System.out.println("table sudah ada, lanjutkan diisi");
-		}
-		else  {
-			System.out.println("table tidak ditemukan, akan dicoba dicreate (tw_mentah & crawl_log_gagal");
-		    String sql1 = "CREATE TABLE IF NOT EXISTS `tw_mentah` ( " +
-		                   " `id_internal` bigint(20) NOT NULL AUTO_INCREMENT," +
-		                   " `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, " + 
-		                   " `content` text NOT NULL," + 
-		                   " `status` smallint(6) NOT NULL COMMENT '0: belum diproses'," + 
-		                   "  PRIMARY KEY (`id_internal`),"+
-		                   "  KEY `status` (`status`)"+
-		                   " ) DEFAULT CHARSET=utf8"; 
-		    stmt.executeUpdate(sql1);
-		    System.out.println("create table tw_mentah selesai");
-		    String sql2 = "CREATE TABLE IF NOT EXISTS `crawl_log_gagal` (" +
-	                      "`id` bigint(20) NOT NULL AUTO_INCREMENT," +
-	                      " `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, " + 
-	                      " `log_str` text NOT NULL," + 
-	                      " PRIMARY KEY (`id`)" +
-	                      " ) DEFAULT CHARSET=utf8"; 
-		    stmt.executeUpdate(sql2);
-		    System.out.println("create table crawl_log_gagal selesai");
+		    Class.forName("com.mysql.jdbc.Driver");
+		    conn = DriverManager.getConnection("jdbc:mysql://"+dbName+"?user="+userName+"&password="+password);
+			meta = conn.getMetaData();
+			res = meta.getTables(null, null, null, new String[] {"TABLE"});
+			boolean found=false;
+			while (res.next() && !found) {
+			     found =  (res.getString("TABLE_NAME").equals(tableName));
+			}
+			stmt = conn.createStatement();
+			if (found) {
+				System.out.println("table sudah ada, lanjutkan diisi");
+			}
+			else  {
+				System.out.println("table tidak ditemukan, akan dicoba dicreate (tw_mentah & crawl_log_gagal");
+			    String sql1 = "CREATE TABLE IF NOT EXISTS `tw_mentah` ( " +
+			                   " `id_internal` bigint(20) NOT NULL AUTO_INCREMENT," +
+			                   " `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, " + 
+			                   " `content` text NOT NULL," + 
+			                   " `status` smallint(6) NOT NULL COMMENT '0: belum diproses'," + 
+			                   "  PRIMARY KEY (`id_internal`),"+
+			                   "  KEY `status` (`status`)"+
+			                   " ) DEFAULT CHARSET=utf8"; 
+			    stmt.executeUpdate(sql1);
+			    System.out.println("create table tw_mentah selesai");
+			    String sql2 = "CREATE TABLE IF NOT EXISTS `crawl_log_gagal` (" +
+		                      "`id` bigint(20) NOT NULL AUTO_INCREMENT," +
+		                      " `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, " + 
+		                      " `log_str` text NOT NULL," + 
+		                      " PRIMARY KEY (`id`)" +
+		                      " ) DEFAULT CHARSET=utf8"; 
+			    stmt.executeUpdate(sql2);
+			    System.out.println("create table crawl_log_gagal selesai");
 		}
 	   } catch (Exception e) {
 		  e.printStackTrace();
@@ -417,11 +419,15 @@ public class TwCrawler {
     	int delay = Integer.parseInt(strDelay); //delay antar query dalam detik
     	tw.checkCreateTable();
     	
-    	
+    	int jumCrawlError = 0;
     	
     	for (int i=0; i<=100000 ; i++) {
             System.out.println("Proses ke---------------------------------->"+i);
             tw.process();
+            if (tw.isCrawlError) {
+            	jumCrawlError++;
+            }
+            System.out.println("Jumlah total gagal crawl------------------->"+jumCrawlError);
             //sleep menit
             if (isError) {
                 System.out.println("Terjadi kesalahan, distop");

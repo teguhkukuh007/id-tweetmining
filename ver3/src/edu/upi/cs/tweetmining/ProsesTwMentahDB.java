@@ -543,6 +543,7 @@ public class ProsesTwMentahDB{
                pIsTweet.close();
                pFlagTwMentah.close();
                pTw.close();
+               conn.commit();
                conn.setAutoCommit(true);
                conn.close();
            } catch (Exception e) {
@@ -644,7 +645,7 @@ public class ProsesTwMentahDB{
     	
     	int jumEventDupTinggi = 0; //jumlah kejadian dimana duplikasi melebihi 75%
     	
-    	for (int i=0; i<=100000 ; i++) {
+    	for (int i=0;;i++) {
             System.out.println("Proses ke---------------------------------->"+i);
             ptm.process();
             
@@ -675,7 +676,7 @@ public class ProsesTwMentahDB{
 				} 
             }
         }
-    	System.out.println("Selesai semua!");
+    	//System.out.println("Selesai semua!");
 	
 //    	ptm.dbName = "localhost/indosattelkomsel";
 //    	ptm.userName = "yudi3";

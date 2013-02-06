@@ -335,7 +335,7 @@ public class PreproDB {
             conn.setAutoCommit(false);
             pUsr = conn.prepareStatement  ("update "+tableName+" set text_prepro = ? where id_internal = ?");
             pFlag = conn.prepareStatement ("update "+tableName+" set is_prepro = 1 where id_internal = ?");
-            pTw  =  conn.prepareStatement (" select id_internal, text from "+ tableName +" where is_prepro = 0 limit 0,2000");  
+            pTw  =  conn.prepareStatement (" select id_internal, text from "+ tableName +" where  is_prepro = 0 limit 0,2000");  
             
             
             ResultSet rsTw = pTw.executeQuery();
@@ -352,8 +352,9 @@ public class PreproDB {
                 pUsr.executeUpdate();
                 pFlag.setLong(1,idInternal);
                 pFlag.executeUpdate();
-                conn.commit();
             }
+            System.out.println("-------");
+            System.out.println("selesai");
         }
         catch (Exception e) {
         	//ROLLBACK
@@ -369,6 +370,7 @@ public class PreproDB {
         }
         finally  {
             try  {
+            		  conn.commit();
                       if (pUsr != null)  {pUsr.close();}      
                       if (pFlag != null) {pUsr.close();} 
                       if (pTw != null)   {pUsr.close();} 
@@ -495,11 +497,11 @@ CREATE TABLE  `stopwords` (
 		pdb.isBuangHashtag=false;
 		pdb.isProsesSinonim=false;
 		pdb.isBuangStopwords=true;
-//		pdb.proses();
+		pdb.proses();
 //		System.out.println("Jumlah diproses="+pdb.jumDiproses);
 		
-		pdb.flagDuplicate();
-    	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
+//		pdb.flagDuplicate();
+//    	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
 		
 		
 //		PreproDB pdb = new PreproDB(); 		

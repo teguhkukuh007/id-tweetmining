@@ -1,3 +1,13 @@
+//antonim: wordnet
+//kata negasi
+//paper standfor: contradiction detection
+//child 
+//klasifier di root 
+//klasifier di level child
+//setuju atau tidak setuju -->cari  paper?
+//kredilbitiy dan penjelasan satu paket
+
+
 /*
  *  Copyright (C) 2012 yudi wibisono (yudi@upi.edu)
  *
@@ -62,7 +72,7 @@ public class TwNaiveBayesDB {
 	}
 	
 	//prob kelas hasil learning
-	private class ProbKelas {
+	public class ProbKelas {
 		int idKelas;
 		String namaKelas;
 		int jumTweet;      //jumlah tweet dalam kelas tersebut
@@ -70,18 +80,222 @@ public class TwNaiveBayesDB {
 		double probDef;    //probabilitas default untuk kata yang freq=0
 		HashMap<String,Integer> countWord;  //count word per class
 		HashMap<String,Double> probWord = new HashMap<String,Double>();    //prob word per class
+		
+		public void print() {
+			//untuk kepentingan debug
+			System.out.println("id kelas="+idKelas);
+			System.out.println("nama kelas="+namaKelas);
+			System.out.println("jumtweet="+jumTweet);
+			System.out.println("probKelas="+probKelas);
+			System.out.println("probDef="+probDef);
+			
+			//print count word
+			System.out.println("count word");
+			for (Map.Entry<String,Integer> entry : countWord.entrySet())  {
+				 String kata = entry.getKey();
+        		 Integer freq = entry.getValue();
+        		 System.out.println(kata+":"+freq);
+			}
+			
+			//print prob word
+			System.out.println("prob word");
+			for (Map.Entry<String,Double> entry : probWord.entrySet())  {
+				 String kata = entry.getKey();
+        		 Double prob = entry.getValue();
+        		 System.out.println(kata+":"+prob);
+			}
+			
+			
+		}
 	}
 	
+	
+	
+	private ArrayList<ProbKelas> learn(String tambahanFilter) {
+		//tambahan filter berguna misalnya untuk memproses 10 fold cross validation
+		//contoh --> learn("and partisi<>1")   maka hanya partisi<>1 yang diproses utk dijadikan model
+		//harus diawali dengan "and"
+		
+		//input tabel kelas (id_internal,id_kelas,nama_kelas,desc)
+		/*
+		
+		CREATE TABLE IF NOT EXISTS `kelas` (
+				  `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
+				  `id_kelas`    bigint(20) NOT NULL,
+				  `nama_kelas` varchar(50) NOT NULL,
+				  `desc` varchar(75) NOT NULL,
+				  PRIMARY KEY (`id_internal`),
+				  KEY `id_kelas` (`id_kelas`)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+		*/
+		
+		Logger log = Logger.getLogger("naive bayes DB learning ");
 
-	public void learn() {
+		//String[] className = new String[inputFile.length];
+		
+		
+//		System.out.println("Naive Bayes: Learning");
+//        System.out.println("=================================");
+        
+        //ambil data, pindahkan ke memori
+        
+        
+        //  hitung freq kemunculan setiap kata
+        //  hitung jumlah total kata
+        //  hitung jumlah tweet
+        
+        // int jumClass  = className.length;
+        
+        //	int[] jumTweetPerClass = new int[inputFile.length];
+       
+        
+       
+        
+        int jumTweetTotal  = 0;
+        int jumWordTotal   = 0;  //jumlah distinct kata (total kosakata)
+        ArrayList<ProbKelas> alProbKelas = new ArrayList<ProbKelas>();
+        
+        String strSQLJumKelas        = "select count(*) from kelas";
+        String strSQLAmbilIdKelas    = "select id_internal,id_kelas,nama_kelas from kelas";
+        String strSQLAmbilTw         = "select id_internal,text_prepro from tw_jadi where "+fieldClass+" = ? "+tambahanFilter; 	
+        System.out.println(strSQLAmbilTw);
+        
+        Connection conn=null;       
+       
+        PreparedStatement pJumKelas=null;
+        PreparedStatement pAmbilIdKelas=null;
+        PreparedStatement pAmbilTweet = null;
+        
+        ResultSet rsJumKelas=null;
+        ResultSet rsAmbilIdKelas=null;
+        ResultSet rsTw=null;
+       
+       
+        
+        int jumKelas=-1;
+        try  {
+        	 Class.forName("com.mysql.jdbc.Driver");
+             String strCon = "jdbc:mysql://"+dbName+"?user="+userName+"&password="+password;
+        	 //ambil id_class
+        	 conn = DriverManager.getConnection(strCon);
+        	 pJumKelas  =  conn.prepareStatement (strSQLJumKelas);
+        	 rsJumKelas = pJumKelas.executeQuery();
+        	 if (rsJumKelas.next()) {
+        		 jumKelas = rsJumKelas.getInt(1);
+        		 //System.out.println("Jumlah kelas:"+jumKelas);
+        	 } else  {
+        		 System.out.println("Tidak bisa mengakses tabel kelas, abort");
+        		 System.exit(1);
+        	 }
+        	
+        	 //int[] jumTweetPerClass = new int[jumKelas];
+        	 
+        	 pAmbilIdKelas = conn.prepareStatement(strSQLAmbilIdKelas);
+        	 rsAmbilIdKelas = pAmbilIdKelas.executeQuery();
+        	 pAmbilTweet = conn.prepareStatement(strSQLAmbilTw);
+        	 
+//        	 String kata;
+// 	         Integer freq;
+ 	        
+        	 while (rsAmbilIdKelas.next()) {  //loop untuk setiap kelas
+        		 ProbKelas pk = new ProbKelas();
+        		 HashMap<String,Integer> countWord  = new HashMap<String,Integer>();  
+    	         pk.countWord=countWord;
+        		 
+        		 int idKelas = rsAmbilIdKelas.getInt(2); 
+        		 String namaKelas = rsAmbilIdKelas.getString(3);
+        		 //System.out.println("Memproses kelas:"+namaKelas);
+        		 pk.idKelas = idKelas;
+        		 pk.namaKelas = namaKelas; 
+        		 
+//        		 System.out.println("id kelas"+idKelas);
+//        		 System.out.println("Nama kelas:"+namaKelas);
+        		 //ambil tweet untuk kelas tsb
+        		 pAmbilTweet.setInt(1, idKelas);
+        		 rsTw = pAmbilTweet.executeQuery();
+        		 
+        		 int cc=0;
+        		 while (rsTw.next()) {  //untuk setiap tweet
+        			 cc++;
+        			 String tw = rsTw.getString(2);
+        			 //System.out.println("Proses:"+tw);
+        			 Scanner sc = new Scanner(tw);
+		             //hitung frekuensi kata dalam tweet               
+		             while (sc.hasNext()) {
+		                   String kata = sc.next();
+		                   Integer freq = countWord.get(kata);  //ambil kata
+		                   countWord.put(kata, (freq == null) ? 1 : freq + 1);      //jika kata itu tidak ada, isi dengan 1, jika ada increment
+		             }
+		             sc.close();
+        		 }
+        		 pk.jumTweet = cc;
+		         jumTweetTotal =  jumTweetTotal  + cc;
+		         jumWordTotal =   jumWordTotal   + countWord.size();
+		         alProbKelas.add(pk);
+        	 } //loop untuk setiap kelas
+        	 
+        	//hitung probablitas
+ 	        //hitung p(vj) = jumlah tweet kelas j / jumlah total tweet        
+ 	        //hitung p(wk | vj ) = (jumlah kata wk dalam kelas vj + 1 )  / jumlah total kata dalam kelas vj + |kosa kata|
+        	
+        	HashMap<String,Integer> countWord;
+	 	    double prob;
+	 	    int jumWord;
+        	 
+        	for (ProbKelas pk:alProbKelas) {
+        		pk.probKelas = Math.log( (double) pk.jumTweet / jumTweetTotal);
+        		countWord = pk.countWord;
+	        	jumWord = countWord.size();  //jumlah kata di dalam kelas
+	        	pk.probDef = Math.log((double) (1) / (jumWord + jumWordTotal)); //default value kata tanpa freq
+	        	
+	        	//prob untuk setiap kata dalam kelas tsb
+	        	for (Map.Entry<String,Integer> entry : countWord.entrySet()) {
+	        		 String kata = entry.getKey();
+		        		 Integer freq = entry.getValue();
+		        		 prob = Math.log((double) (freq + 1) / (jumWord + jumWordTotal ));  //dalam logiritmk
+		        		 pk.probWord.put(kata, prob);
+	        	}
+        	}
+        	
+        }
+        catch (Exception e)
+        {
+        		//ROLLBACK
+     	    	logger.log(Level.SEVERE, null, e);
+        		if (conn != null) {
+                try {
+ 					conn.rollback();
+ 				} catch (SQLException e1) {
+ 					logger.log(Level.SEVERE, null, e1);   
+ 				}
+                System.out.println("Fatal Error, rollback...");
+                //isError = true;
+            }
+        }   
+        finally {       
+        	try {   		
+    	        pAmbilIdKelas.close();
+    	        pAmbilTweet.close();
+    	        rsJumKelas.close();
+    	        rsAmbilIdKelas.close();
+    	        rsTw.close();
+            	pJumKelas.close();
+                conn.close();
+                
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, null, e);
+                //isError = true;
+            }    
+        }
+        return alProbKelas;
+	}	
+	
+
+	public void learnToDB() {
 		/*  Input:
 		 *
-		 *     table 
-		 *     kelas (id,id_kelas,nama_kelas,desc)
-		 * 
-		 *     className dalam string, tapi yang disimpan di tabel.fieldClass adalah indexnya
-		 *     contoh: array berisi {hujuan,cerah} maka berartti 
-		 *     0: hujan, 1:cerah. Yang disimpan di tabel hanya 0 dan 1 
+		 *   
+		 *     
 		 *     
 		 *     Field yang digunakan:
 		 *     - fieldClass adalah class (integer) dari record
@@ -94,153 +308,60 @@ public class TwNaiveBayesDB {
 		 *     
 		 *       
 		 */
-			Logger log = Logger.getLogger("naive bayes DB");
+		    
+		
+			Logger log = Logger.getLogger("naive bayes DB learning DB");
 
 			//String[] className = new String[inputFile.length];
 			
 			
-			System.out.println("Naive Bayes: Learning");
+			System.out.println("Naive Bayes: Learning & tulis ke DB");
 	        System.out.println("=================================");
 	        
-	        //ambil data, pindahkan ke memori
-	        
-	        
-	        //String namaFileOutput = outModelFile;
-	        
-	        //untuk setiap file class
-	        //  hitung freq kemunculan setiap kata
-	        //  hitung jumlah total kata
-	        //  hitung jumlah tweet
-	        
-	        //coba satu file dulua
-	        String kata;
-	        Integer freq;
-	        
-	        
-	        
-	       // int jumClass  = className.length;
-	        
-//	        int[] jumTweetPerClass = new int[inputFile.length];
-	       
 	        
 	       
 	        
-	        int jumTweetTotal  = 0;
-	        int jumWordTotal   = 0;  //jumlah distinct kata (total kosakata)
-	        ArrayList<ProbKelas> alProbKelas = new ArrayList<ProbKelas>();
-	        
-	        String strSQLJumKelas        = "select count(*) from kelas";
-	        String strSQLAmbilIdKelas    = "select id,id_kelas,nama_kelas from kelas";
-	        String strSQLAmbilTw         = "select id_internal,text_prepro from tw_jadi where tw_jadi."+fieldClass+" = ?"; 	
+	        ArrayList<ProbKelas> alProbKelas = learn("");
 	        
 	        
 	        Connection conn=null;       
-	        PreparedStatement pTw = null;
-	        PreparedStatement pJumKelas=null;
-	        PreparedStatement pAmbilIdKelas=null;
-	        PreparedStatement pAmbilTweet = null;
 	        PreparedStatement pInsertProbKelas = null;
 	        PreparedStatement pInsertProbKata = null;
-	        
-	        ResultSet rsJumKelas;
-	        ResultSet rsAmbilIdKelas;
-	        ResultSet rsTw;
-	        Class.forName("com.mysql.jdbc.Driver");
-	        String strCon = "jdbc:mysql://"+dbName+"?user="+userName+"&password="+password;
 	       
 	        
-	        int jumKelas=-1;
+	       
+	        String strCon = "jdbc:mysql://"+dbName+"?user="+userName+"&password="+password;
 	        try  {
 	        	 //ambil id_class
+	        	 Class.forName("com.mysql.jdbc.Driver");
 	        	 conn = DriverManager.getConnection(strCon);
-	        	 pJumKelas  =  conn.prepareStatement (strSQLJumKelas);
+	        	 conn.setAutoCommit(false);
 	        	 
-	        	 rsJumKelas = pJumKelas.executeQuery();
-	        	 if (rsJumKelas.next()) {
-	        		 jumKelas = rsJumKelas.getInt(1);
-	        		 System.out.println("Jumlah kelas:"+jumKelas);
-	        	 } else  {
-	        		 System.out.println("Tidak bisa mengakses tabel kelas, abort");
-	        		 System.exit(1);
-	        	 }
 	        	
-	        	 int[] jumTweetPerClass = new int[jumKelas];
-	        	 
-	        	 pAmbilIdKelas = conn.prepareStatement(strSQLAmbilIdKelas);
-	        	 rsAmbilIdKelas = pAmbilIdKelas.executeQuery();
-	        	 pAmbilTweet = conn.prepareStatement(strSQLAmbilTw);
-	        	 
-	        	 
-	        	 while (rsAmbilIdKelas.next()) {  //loop untuk setiap kelas
-	        		 ProbKelas pk = new ProbKelas();
-	        		 HashMap<String,Integer> countWord  = new HashMap<String,Integer>();  
-	    	         pk.countWord=countWord;
-	        		 
-	        		 int idKelas = rsAmbilIdKelas.getInt(2); 
-	        		 String namaKelas = rsAmbilIdKelas.getString(3);
-	        		 System.out.println("Memproses kelas:"+namaKelas);
-	        		 pk.idKelas = idKelas;
-	        		 pk.namaKelas = namaKelas; 
-	        		 
-	        		 //ambil tweet untuk kelas tsb
-	        		 pAmbilTweet.setInt(1, idKelas);
-	        		 rsTw = pAmbilTweet.executeQuery();
-	        		 
-	        		 int cc=0;
-	        		 while (rsTw.next()) {  //untuk setiap tweet
-	        			 cc++;
-	        			 String tw = rsTw.getString(2);
-	        			 Scanner sc = new Scanner(tw);
-			             //hitung frekuensi kata dalam tweet               
-			             while (sc.hasNext()) {
-			                   kata = sc.next();
-			                   freq = countWord.get(kata);  //ambil kata
-			                   countWord.put(kata, (freq == null) ? 1 : freq + 1);      //jika kata itu tidak ada, isi dengan 1, jika ada increment
-			             }
-			             sc.close();
-	        		 }
-	        		 pk.jumTweet = cc;
-			         jumTweetTotal =  jumTweetTotal  + cc;
-			         jumWordTotal =   jumWordTotal   + countWord.size();
-			         alProbKelas.add(pk);
-	        	 } //loop untuk setiap kelas
-	        	 
-	        	//hitung probablitas
-	 	        //hitung p(vj) = jumlah tweet kelas j / jumlah total tweet        
-	 	        //hitung p(wk | vj ) = (jumlah kata wk dalam kelas vj + 1 )  / jumlah total kata dalam kelas vj + |kosa kata|
-	        	
-	        	HashMap<String,Integer> countWord;
-		 	    double prob;
-		 	    int jumWord;
-	        	 
-	        	for (ProbKelas pk:alProbKelas) {
-	        		pk.probKelas = Math.log( (double) pk.jumTweet / jumTweetTotal);
-	        		countWord = pk.countWord;
-		        	jumWord = countWord.size();  //jumlah kata di dalam kelas
-		        	pk.probDef = Math.log((double) (1) / (jumWord + jumWordTotal)); //default value kata tanpa freq
-		        	
-		        	//prob untuk setiap kata dalam kelas tsb
-		        	for (Map.Entry<String,Integer> entry : countWord.entrySet()) {
-		        		 kata = entry.getKey();
- 		        		 freq = entry.getValue();
- 		        		 prob = Math.log((double) (freq + 1) / (jumWord + jumWordTotal ));  //dalam logiritmk
- 		        		 pk.probWord.put(kata, prob);
- 		        		 //pw.println(kata+","+prob);  //tulis ke file
-		        	}
-	        	}
-	        	
-	        //tulis ke database
-		    String strSQLinsertProbKelas =    "insert into modelnb_class_prob (id_kelas,nama_class,prob_class,jumkata_class,prob_freq_nol) values (?,?,?,?,?)";	
-		    String strSQLinsertProbKata =     "insert into modelnb_prob_kata  (id_kelas,kata,prob) values (?,?,?)";
+	        	 //tulis ke database
+	        	 String strSQLinsertProbKelas =   "insert into modelnb_class_prob (id_kelas,nama_class,prob_class,jumkata_class,prob_freq_nol) values (?,?,?,?,?)";	
+	        	 String strSQLinsertProbKata  =   "insert into modelnb_prob_kata  (id_kelas,kata,prob) values (?,?,?)";
 	        
-		    pJumKelas  =  conn.prepareStatement (strSQLJumKelas);
-		    pJumKelas  =  conn.prepareStatement (strSQLJumKelas);
-	         	
-	        
-	        	
-	        	
+	        	 pInsertProbKelas  =  conn.prepareStatement (strSQLinsertProbKelas);
+	        	 pInsertProbKata   =  conn.prepareStatement (strSQLinsertProbKata);
 	        	 
-	        	 
+				 for (ProbKelas pk: alProbKelas) {
+					    pInsertProbKelas.setInt(1,pk.idKelas);
+					    pInsertProbKelas.setString(2,pk.namaKelas);
+					    pInsertProbKelas.setDouble(3,pk.probKelas);
+					    pInsertProbKelas.setInt(4,pk.countWord.size());
+					    pInsertProbKelas.setDouble(5,pk.probDef);
+					    pInsertProbKelas.executeUpdate();
+					    for (Map.Entry<String,Double> entry : pk.probWord.entrySet()) {
+					    	pInsertProbKata.setInt(1,pk.idKelas);
+					    	String kata = entry.getKey();
+			        		Double probKata = entry.getValue();
+					    	pInsertProbKata.setString(2,kata);
+					    	pInsertProbKata.setDouble(3,probKata);
+					    	pInsertProbKata.addBatch();
+					    }
+				  }
+				  pInsertProbKata.executeBatch();
 	        }
 	        catch (Exception e)
 	        {
@@ -252,19 +373,15 @@ public class TwNaiveBayesDB {
 	 				} catch (SQLException e1) {
 	 					logger.log(Level.SEVERE, null, e1);   
 	 				}
-	                System.out.println("Connection rollback...");
+	                System.out.println("Fatal Error, rollback...");
 	                //isError = true;
 	            }
 	        }   
 	        finally {
 	            try {
-	    	        pAmbilIdKelas.close();
-	    	        pAmbilTweet.close();
-	    	        rsJumKelas.close();
-	    	        rsAmbilIdKelas.close();
-	    	        rsTw.close();
-	            	pJumKelas.close();
-	                pTw.close();
+	                pInsertProbKata.close();
+	                pInsertProbKelas.close();
+	                conn.commit();
 	                conn.setAutoCommit(true);
 	                conn.close();
 	            } catch (Exception e) {
@@ -272,182 +389,215 @@ public class TwNaiveBayesDB {
 	                //isError = true;
 	            }    
 	        }
-	        
-	}     
+	}
+	
+	
+	public ProbKelas classifyMem(ArrayList<ProbKelas> model,String tweet) {   //model diambil dari memori, cocok untuk x fold cross
+	    //System.out.println("klasifikasi tweet:"+tweet);
+	    double maxProb = -Double.MAX_VALUE;
+	    HashMap<String,Double> probWord;
+	    double totProb = 0;
+	    ProbKelas maxClass=null;
 	    
+	    //cari kelas dengan prob maksimal
+	    for (ProbKelas pk: model) {
+	       //System.out.println("kelas:"+pk.namaKelas);
+	       probWord =  pk.probWord; //  wordProbinClass.get(i);  //hashmap
+	       Scanner sc = new Scanner(tweet);                
+	       totProb = pk.probKelas;  //probClass[i];              //inisialisasi
+	       while (sc.hasNext()) {               //loop untuk semua kata
+	           String kata = sc.next();
+	           Double prob = probWord.get(kata);  //ambil probilitas kata
+	           if (prob!=null) {
+	               //System.out.println("kata:"+kata+"; Prob="+prob);  //debug
+	           } else {  //kata tidak ada, menggunakan nilai standar
+	               //System.out.println(" Menggunakan nilai def kata:"+kata+"; Prob="+pk.probDef);  //debug
+	               prob = pk.probDef;
+	           } 	
+	           totProb = totProb + prob;
+	        } //while sc            		
+	        sc.close();
+	        //System.out.println("Total prob:"+totProb);
+	        if (totProb>maxProb)  {   //ambil yang paling besar
+	        	//System.out.println("Tukar dengan maxprob:"+maxProb);
+	        	maxProb = totProb;
+	        	maxClass = pk;
+	        }
+	    }//for
+	    return maxClass;
+	}
 	
-	
-	
-	
-	public void classify(String inputFileModel, String inputFileProses, String dirOutput) {
-	  /*
-	   *    input:
-	   *    	
-	   *        - file yang akan diklasifiksikan dan sudah diprepro + synonim+stwopwords (inputfileproses)
-	   *    	- file model hasil learning                          (inputfilemodel)
-	   *    
-	   *    output: file sebanyak jumlah class
-	   * 
-	   */
-	   //contoh input: 
-		//2                                                    <--- jumlah class 
-		//G:\eksperimen\corpus_tweet_opini\siap_nonopini_1     <--- nama class 1
-		//G:\eksperimen\corpus_tweet_opini\siap_opini_1        <--- nama class 2
-		//-2.2782152230971129                                  <--- prob class 1 
-		//-7.217847769028871                                   <----prob class 2
-		//=====>jum_kata,498                                   <---- ambil jumlah kata untuk class 1
-		//-7.60339933974067                                    <---- prob untuk kata yang freq-nya 0
-		//ngk,-6.910252159180724                               <---  prob kata untuk class 1 (log)
-		//chance,-6.910252159180724
-		//..... <sampai 498>
-		//=====>jum_kata,1009                                  <--- jum kata class 2
-		//-7.60339933974067                                    <---- prob untuk kata yang freq-nya 0
-		//bara,-7.1372784372603855							   <--- prob kata untuk class 2 (log) 
-		//siap,-7.1372784372603855					
-		//dst.
+	public void xFoldCrossVal() {
+	/*
+	 *  tabel tw_jadi punya field partisi (int, indexed)
+	 *  field class sudah terdefinisi
+	 *  tabel partisi tsb 	
+	 *  
+	 *  ALTER TABLE `tw_jadi` ADD COLUMN `partisi` INT NULL DEFAULT '0' AFTER `sanggahan_dukungan`;
+	 *  ALTER TABLE `tw_jadi` ADD INDEX `partisi` (`partisi`);
+	 */
 		
-	    //load model, kedepan perlu dipikirkan masasalah scalability (memori terbatas)
-		Logger log = Logger.getLogger("edu.cs.upi");
-		try {
-            FileInputStream fstream = new FileInputStream(inputFileModel);
-            DataInputStream in = new DataInputStream(fstream);
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            String strLine;
-            
-            int jumClass=-1;
-            
-            //jumlah class
-            if ((strLine = br.readLine()) != null) {
-            	jumClass = Integer.parseInt(strLine);  
-            	System.out.println("jum class="+strLine);
-            }
-            
-            String[] namaClass = new String[jumClass]; 
-            double[] probClass = new double[jumClass];
-            double[] probClassDef = new double[jumClass];  //default prob untuk kelas dengan freq 0
-            ArrayList<HashMap<String,Double>> wordProbinClass = new ArrayList<HashMap<String,Double>>();  //prob word per class
-            
-            //ambil nama class
-            for (int i=0;i<jumClass;i++) {
-            	if ((strLine = br.readLine()) != null) {
-                	namaClass[i] = strLine.substring(strLine.lastIndexOf('\\')+1,strLine.length()); 
-                	System.out.println(namaClass[i]);  //debug
-                }
-            }
-            
-            
-            //ambil prob tiap class
-            for (int i=0;i<jumClass;i++) {
-            	if ((strLine = br.readLine()) != null) {
-                	probClass[i] = Double.parseDouble(strLine);  
-                	System.out.println(probClass[i]);  //debug
-                }
-            }
-            
-            String [] str;
-            int jumKata=0;
-            int posClass=0;
-            while ((strLine = br.readLine()) != null)   {
-               str = strLine.split(",");  //=====>jum_kata,498
-               jumKata = Integer.parseInt(str[1]);
-               System.out.println("Jumkata = "+jumKata); //debug
-               
-               if ((strLine = br.readLine()) != null) {   //ambil nilai prob default untuk kata dengan freq 0
-            	   probClassDef[posClass] = Double.parseDouble(strLine);   
-               }
-               
-               
-               HashMap<String,Double> wp = new HashMap<String,Double>();
-               wordProbinClass.add(wp);               
-               for (int i=0;i<jumKata;i++) {
-            	   //ambil prob kata
-            	   if ((strLine = br.readLine()) != null) {
-	            	   str = strLine.split(",");
-	            	   wp.put(str[0], Double.parseDouble(str[1]));
-	            	   System.out.println(str[0]+","+str[1]);
-            	   }
-               }
-               posClass++;
-            }
-            br.close();
-            in.close();
-            fstream.close();
-            
-            //---------------------> prob sudah masuk, tinggal proses file input
-            
-            String s = inputFileProses.substring(0, inputFileProses.lastIndexOf('.')); //without ext
-            String inputFileWoExt = s.substring(s.lastIndexOf('\\')+1,s.length());  //without dir
-            
-            //inisialiasasi file yang akan ditulis, ini juga berbahaya dari sisi skalabilitas 
-            //karena ada batasan file yang dapat diopen 
-            PrintWriter[] arrPw = new PrintWriter[jumClass]; 
-            for (int i=0;i<jumClass;i++) {
-            	PrintWriter pw = new PrintWriter(dirOutput+inputFileWoExt+"_classresult_"+namaClass[i]+".txt");
-            	arrPw[i] = pw;
-            }
-            
-            
-            fstream = new FileInputStream(inputFileProses);
-            in = new DataInputStream(fstream);
-            br = new BufferedReader(new InputStreamReader(in));
-            String kata;
-            Double prob;
-            HashMap<String,Double> probWord;
-            System.out.println("klasifikasi dimulai");  //debug
-            
-            double maxProb = -Double.MAX_VALUE; 
-            int maxClass   = -1; //kelas yang paling tepat dengan prob terbesar
-            double totProb = 0;
-            while ((strLine = br.readLine()) != null)   {
-        		System.out.println("tweet:"+strLine);
-            	maxProb = -Double.MAX_VALUE;
-            	for (int i=0;i<jumClass;i++) {   //loop untuk semua kelas
-            		System.out.println("kelas ke:"+i);
-            		probWord = wordProbinClass.get(i);  //hashmap
-            		Scanner sc = new Scanner(strLine);                
-            		totProb = probClass[i];              //inisialisasi
-            		while (sc.hasNext()) {              //loop untuk semua kata
-	                   kata = sc.next();
-	                   prob = probWord.get(kata);  //ambil probilitas kata
-	                   if (prob!=null) {
-	                	   System.out.println("kata:"+kata+"; Prob="+prob);  //debug
-	                	   //totProb = totProb + prob;
-	                   } else {  //kata tidak ada menggunakan nilai standar
-	                	   System.out.println(" Menggunakan nilai def kata:"+kata+"; Prob="+probClassDef[i]);  //debug
-	                	   prob = probClassDef[i];
-	                   } 	
-	                   totProb = totProb + prob;
-	                }            		
-            		sc.close();
-            		
-            		System.out.println("Total prob:"+totProb);
-            		if (totProb>maxProb)  {   //ambil yang paling besar
-            			System.out.println("Tukar dengan maxprob:"+maxProb);
-            			maxProb = totProb;
-            			maxClass = i;
-            		}
-	             }
-            	 //masukan strLine ke file sesuai dengan maxClass
-            	System.out.println("kelas yang dipilih:"+maxClass);
-            	arrPw[maxClass].println(strLine);
-            }  //while strLine = br.readLine
-            
-            //close file output
-            for (int i=0;i<jumClass;i++) {
-            	arrPw[i].close();
-            }
-            
-            
-        } catch (Exception e) {
-            log.severe(e.toString());
-        }
-	}
-    
-        
-	}
+	   int jumFold = 10;	
+		
+		//cek validitas model
+		
+		//partisi
+		//hitung jumlah record total
+	   //bagi dengan jumFold
+	   //loop untuk semua data, secara random
+	   //isi field partisi dengan angka yg akan menjadi group (menggunakan mod)
+	   
+	   //bagian where-nya nanti diganti
+	   String strSQLJumTw         = "select count(*)  from tw_jadi where " +fieldClass+" is not null";
+	   String strSQLtw            = "select id_internal from tw_jadi where " +fieldClass+" is not null order by rand()";
+	   String strSQLupdatePartisi = "update tw_jadi set partisi = ? where id_internal= ?";
+	   String strSQLtwPartisi     = "select id_internal,text,text_prepro,"+fieldClass+" from tw_jadi where partisi = ? and " +fieldClass+" is not null";
+	   
+	   Connection conn=null;       
+       PreparedStatement pJumTw = null;
+       PreparedStatement pTw = null;
+       PreparedStatement pUpdatePartisi = null;
+       PreparedStatement pTwPartisi = null;
+       ResultSet rsJumTw = null;
+       ResultSet rsTw = null;
+       ResultSet rsTwPartisi = null;
+       
+      
+       try  {
+       	 //ambil id_class
+    	 Class.forName("com.mysql.jdbc.Driver");
+         String strCon = "jdbc:mysql://"+dbName+"?user="+userName+"&password="+password;
+       	 conn = DriverManager.getConnection(strCon);
+       	 conn.setAutoCommit(false);
+       	 pTwPartisi = conn.prepareStatement(strSQLtwPartisi);
+       	 pJumTw  =  conn.prepareStatement (strSQLJumTw);
+       	 rsJumTw = pJumTw.executeQuery();
+       	 int jumTw;
+       	 if (rsJumTw.next()) {
+       		 jumTw = rsJumTw.getInt(1);
+       		 System.out.println("Jumlah tweet"+jumTw);
+       	 } else {
+       		 System.out.println("tidak ada ada atau error mengakses db, abort");
+       		 System.exit(1);
+       	 }  
+       	 
+       	 //ambil data tweet
+       	 pTw = conn.prepareStatement(strSQLtw);
+       	 pUpdatePartisi = conn.prepareStatement(strSQLupdatePartisi);
+       	 rsTw = pTw.executeQuery();
+       	 int cc = 0;
+       	 while (rsTw.next()) {
+       		 int id = rsTw.getInt(1);
+       		 int partisi = (int) (cc % jumFold+1);
+//       		 System.out.println("id="+id);
+//       		 System.out.println("partisi:"+partisi);
+       		 pUpdatePartisi.setInt(1, partisi);
+       		 pUpdatePartisi.setInt(2, id);
+       		 pUpdatePartisi.addBatch();
+       		 cc++;
+       	 }	 
+       	 pUpdatePartisi.executeBatch();
+       	 
+       	 ArrayList<ProbKelas> model;
+       	 double totAkurasi=0;
+       	 //loop untuk setiap partisi
+       	 for (int i=1;i<=jumFold;i++)  {  //partisi mulai dari 1       		 
+       		 //learn, lalu klasifikasikan
+       		 System.out.println("Proses partisi ke:"+i);
+       		 System.out.println("learn");
+       		 model = learn("and partisi<>"+i);   //partisi i menjadi testing, partisi lainnya menjadi training  jd tidak masuk     		 
+//       		 for (ProbKelas pk: model) {
+//       			 pk.print();
+//       		 }
+       		 
+       		 
+       		 //loop untuk semua tweet dalam partisi i
+       		 pTwPartisi.setInt(1,i);            
+       		 rsTwPartisi = pTwPartisi.executeQuery();
+       		 ProbKelas pk;
+       		 int jumCocok = 0;
+       		 int jumSalah = 0;
+       		 while (rsTwPartisi.next()) {
+       			 int id = rsTwPartisi.getInt(1);
+       			 String twOrig = rsTwPartisi.getString(2); //belum diprepro
+       			 String tw = rsTwPartisi.getString(3);
+       			 int kelas = rsTwPartisi.getInt(4);
+       			 pk = classifyMem(model,tw);
+//       			 System.out.println("Kelas yang benar:"+kelas);
+//       			 System.out.println("Kelas prediksi:"  +pk.idKelas);
+       			 if (pk.idKelas == kelas) {
+       				// System.out.println("cocok:");
+       				 jumCocok++;
+       			 } else {
+       				// System.out.println("tdk cocok:");
+       				 
+       				 System.out.println("tweet:"+twOrig);
+       				 System.out.println("id:"+id);
+       				 System.out.println("Kelas yang benar:"+kelas);
+       				 System.out.println("Kelas prediksi:"  +pk.idKelas);
+       				 System.out.println();
+      				 jumSalah++;
+       			 }
+       		 }
+       		 System.out.println("Jum cocok:"+jumCocok);
+       		 System.out.println("Jum salah:"+jumSalah);
+       		 double akurasi = (double) jumCocok / (jumCocok+jumSalah);
+       		 totAkurasi = totAkurasi + akurasi;
+       		 System.out.println( "Akurasi:"+akurasi);
+       		 //System.exit(1); //debug dulu
+       	 }
+       	 double avgAkurasi = totAkurasi / jumFold;
+       	 System.out.println();
+       	 System.out.println("rata2 akurasi="+avgAkurasi);
+       
+       }  catch (Exception e)
+       {
+   		//ROLLBACK
+	       logger.log(Level.SEVERE, null, e);
+   		   if (conn != null) {
+           try {
+				conn.rollback();
+			} catch (SQLException e1) {
+				logger.log(Level.SEVERE, null, e1);   
+			}
+           System.out.println("Fatal Error, rollback...");
+           //isError = true;
+       }
+   }   
+   finally {
+       try {
+    	   pJumTw.close();
+           pTw.close();
+           pUpdatePartisi.close();
+           rsTw.close();
+           rsJumTw.close();
+       	   conn.commit();
+       	   conn.setAutoCommit(true);
+           conn.close();
+       } catch (Exception e) {
+           logger.log(Level.SEVERE, null, e);
+           //isError = true;
+       }    
+   }
+	}	
+	
+	
+	
+	
 	
 	public static void main(String[] args) {
-			  NaiveBayesDB nb = new NaiveBayesDB();
+			  TwNaiveBayesDB nb = new TwNaiveBayesDB();
+//		    	ptm.dbName = "";
+//		    	ptm.userName = "yudi3";
+//		    	ptm.password = "rahasia";
+			  
+			  nb.dbName =    "localhost/obama2";
+			  nb.userName =  "yudi3"; 
+			  nb.password =  "rahasia";
+			  nb.fieldClass=  "sanggahan_dukungan";
+			  nb.xFoldCrossVal();
+			  
+			  
 			 /*
 			  String[] input   = new String[2]; 
 			  input[0]         = "G:\\eksperimen\\corpus_tweet_opini\\positif_siap_opini2.txt";

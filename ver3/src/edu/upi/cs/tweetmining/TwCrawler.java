@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS `crawl_log_gagal` (
 
 
 TBD, 
+- coba menggunakan page+rpp, saat ini satu kali request hanya menghasilkan sekitar 20 tweet dengan cara page dan rpp mungkin hasilnya bisa lebih baik?
+- mekanisme dynamic delay, saaat duplikasi pada proses_twmentah tinggi delay diperpendek dan demikian juga sebaliknya.
+  delay disimpan di DB
 - kadang kena out of memory
 - bisa dibuat lebih efisien untuk pemanggilan berulang kali? (walaupun masalah utama proses crawl dibatasi oleh limitasi API twitter)
 
@@ -421,7 +424,7 @@ public class TwCrawler {
     	
     	int jumCrawlError = 0;
     	
-    	for (int i=0; i<=100000 ; i++) {
+    	for (int i=0;;i++) {
             System.out.println("Proses ke---------------------------------->"+i);
             tw.process();
             if (tw.isCrawlError) {
@@ -439,13 +442,8 @@ public class TwCrawler {
                 //System.out.println("Selesai, tidur dulu "+ jumTidurInMin+ " menit, setelah menyelesaikan iterasi ke "+i);          
                 //Thread.sleep(jumTidurInMin * 60000);
             }
-        }
-    	System.out.println("Selesai semua!");
-    	
+        }   	
     }
-
-
-    
 }
 
 

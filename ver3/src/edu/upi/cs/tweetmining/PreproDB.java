@@ -485,7 +485,102 @@ CREATE TABLE  `stopwords` (
 	
 	
 	public static void main(String[] args) {
-		//query untuk tambah field yang dibutuhkan
+		//proses param 
+    	String strDb=""; 
+    	String strDbUser="";
+    	String strDbPass="";
+    	boolean isBuangMention=false;
+    	boolean isBuangHashtag=false;
+    	boolean isProsesSinonim=false;
+    	boolean isBuangStopwords=false;
+    	String strDelay="";
+    	
+    	String strParam;
+    	
+    	StringBuilder sb = new StringBuilder();
+    	for (String str:args) {
+    		sb.append(str);
+    		sb.append(" ");
+    	}
+    	
+    	strParam = sb.toString();
+    	String[] arrParam = strParam.split("-");
+    	
+    	//lebih efisien pake group regex mungkin
+    	String strLast="";
+    	for  (String par:arrParam) {
+    		try
+    		{
+	    		if (par.equals("")) continue;
+    			String[] arrDetPar = par.split(" "); 
+	    		if (arrDetPar[0].equals("db")) {
+	    			strLast="db";
+	    			strDb = arrDetPar[1]; 
+	    		} else
+	    		if (arrDetPar[0].equals("u")) {
+	    			strLast="u";
+	    			strDbUser = arrDetPar[1]; 	    			
+	    		} else 
+	    		if (arrDetPar[0].equals("p")) {
+	    			strLast="p";
+	    			strDbPass = arrDetPar[1];
+	    		} else
+			    if (arrDetPar[0].equals("delay")) {
+			    	strLast="delay";
+			    	strDelay = arrDetPar[1]; 	    			
+				} else  
+				if (arrDetPar[0].equals("buangmention")) {
+				    strLast="isBuangMention";
+				    isBuangMention = true; 	    			
+				} else
+		    	if (arrDetPar[0].equals("sinonim")) {   
+					 strLast="isProsesSinonim";
+					 isProsesSinonim = true;
+				} else
+				if (arrDetPar[0].equals("buangstopwords")) { 
+					 strLast="isBuangStopwords";
+					 isBuangStopwords = true; 	    			
+				} else	
+				if (arrDetPar[0].equals("buanghashtag")) {
+					 strLast="isBuangHashtag";
+					 isBuangHashtag = true;  	    			
+				} else
+	    		{
+	    			//parameter tidak dikenal
+	    			System.out.println("Error parameter tdk dikenal : "+par);
+	    		}
+    		}
+    		catch (Exception e) {
+    			System.out.println("parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:");
+    			System.out.println("-db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag");
+    			System.out.println("Contoh:");
+    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag");
+    			System.exit(1);
+    		}
+    	}
+    	
+    	if (strDb.equals("") || strDbUser.equals("") || strDbPass.equals("")) {
+    		System.out.println("parameter tidak lengkap db, dbuser dan dpass harus ada! Gunakan parameter dengan format:");
+    		System.out.println("-db databasename -u dbusername -p dbpassword -delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag");
+			System.out.println("Contoh:");
+			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag");
+    		System.exit(1);
+    	}
+    	
+    	if (strDelay.equals("")) {
+    		strDelay = "60";}
+    	
+    	System.out.println("db-->"+strDb);
+    	System.out.println("dbuser-->"+strDbUser);
+    	System.out.println("dbpass-->"+strDbPass);
+    	System.out.println("delay-->"+strDelay);
+    	System.out.println("buangmention-->"+isBuangMention);
+    	System.out.println("buanghashtag-->"+isBuangHashtag);
+    	System.out.println("buangstopwords-->"+isBuangStopwords);
+    	System.out.println("proses sinonim-->"+isProsesSinonim);
+		
+		
+    	System.exit(1); //debug
 		
 		
 		PreproDB pdb = new PreproDB(); 		

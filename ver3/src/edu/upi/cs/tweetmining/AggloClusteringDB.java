@@ -47,7 +47,7 @@ public class AggloClusteringDB {
 	}
 	
 	//berdasarkan JarakCluster
-    public class JarakClusterComparable implements Comparator<JarakCluster>{
+    private class JarakClusterComparable implements Comparator<JarakCluster>{
         @Override
         public int compare(JarakCluster o1, JarakCluster o2) {
                 return (o1.jarak>o2.jarak ? -1 : (o1.jarak==o2.jarak ? 0 : 1));
@@ -55,7 +55,7 @@ public class AggloClusteringDB {
     }
     
     //berdasarkan kohesi
-    public class CohesionClusterComparable implements Comparator<ClusterAgglo>{
+    private class CohesionClusterComparable implements Comparator<ClusterAgglo>{
         @Override
         public int compare(ClusterAgglo o1, ClusterAgglo o2) {
             double coh1 = o1.cohesion();     
@@ -65,7 +65,7 @@ public class AggloClusteringDB {
     }
     
     //berdasarkan inner quality
-    public class InnerQClusterComparable implements Comparator<ClusterAgglo>{
+    private class InnerQClusterComparable implements Comparator<ClusterAgglo>{
         @Override
         public int compare(ClusterAgglo o1, ClusterAgglo o2) {
             double coh1 = o1.innerQualityScore();     
@@ -75,7 +75,7 @@ public class AggloClusteringDB {
     }
     
     //berdasarkan level
-    public class LevelClusterComparable implements Comparator<ClusterAgglo>{
+    private class LevelClusterComparable implements Comparator<ClusterAgglo>{
         @Override
         public int compare(ClusterAgglo o1, ClusterAgglo o2) {
             double coh1 = o1.level;     
@@ -87,7 +87,7 @@ public class AggloClusteringDB {
     
     private ArrayList<ClusterAgglo> alAllCluster = new ArrayList<ClusterAgglo>();  //semua cluster dalam tree
 	
-	public void process() {
+	public void process(String filter) {
 		//menggunakan LIMIT, cek dulu!!
 		//mulai dari jumlah cluster sebanyak data
 		//loop untuk semua cluster, cari cluster yang jarak antar keduanya terpendek, gabung
@@ -118,8 +118,9 @@ public class AggloClusteringDB {
             
             String q = "select  concat('(',tj.id_internal,')',tj.text) as tw,t.tfidf_val as tfidf "+
             		   "from "+ tableNameTfidf +" t,"+ tableNameTwJadi + " tj " + 
-            		   "where t.id_internal_tw_jadi = tj.id_internal and trim(t.tfidf_val)<>'' and tj.is_duplicate=0 "+
-            		   "limit 0,1000";
+            		   "where t.id_internal_tw_jadi = tj.id_internal and trim(t.tfidf_val)<>'' and tj.is_duplicate=0 " +
+            		   filter+
+            		   " limit 0,1000";
             
             pTw  =  conn.prepareStatement (q);
 
@@ -367,6 +368,6 @@ public class AggloClusteringDB {
 		aggC.tableNameTfidf = "tfidf_2000";
 		aggC.namaFileOutput = "D:\\xampp\\htdocs\\obama\\obama_2000_level.txt";
 		//aggC.tableNameTwJadi ="tw_jadi_sandyhoax_nodup_dukungan";
-		aggC.process();
+		aggC.process("");
 	}
 }

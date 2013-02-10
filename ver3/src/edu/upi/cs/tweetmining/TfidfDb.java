@@ -48,6 +48,7 @@ import java.util.Comparator;
 
 
 public class TfidfDb {
+	 private static final Logger logger = Logger.getLogger("TfidfDb");
      public static final int MINTWEET = 3;  //minimum kemunculam tweet yg mengandung term supaya dihitung
      public static final int MINFREQ  = 3;  //minimum kemunculam tweet yg mengandung term supaya dihitung
      
@@ -60,7 +61,7 @@ public class TfidfDb {
      
      //private ArrayList<String>  alExtStopWords = new ArrayList<String>();
      
-     public class TermStatComparable implements Comparator<TermStat>{
+     private class TermStatComparable implements Comparator<TermStat>{
 		@Override
 		public int compare(TermStat o1, TermStat o2) {
 			return (o1.getAvg()>o2.getAvg() ? -1 : (o1.getAvg()==o2.getAvg() ? 0 : 1));
@@ -87,7 +88,34 @@ public class TfidfDb {
 //                logger.severe(e.toString());
 //            }
 //     }
-
+     
+     public void clearTable() {
+    	 //hapus semua isi tableTfidf
+    	 //idealnya nanti diganti dengan proses incremental (online), 
+    	 //tapi untuk sekarang dihapus dulu lalu diisi dengan yang baru
+    	 Connection conn=null;       
+         PreparedStatement pDelete = null;
+         try {
+         	 Class.forName("com.mysql.jdbc.Driver");
+             String strCon = "jdbc:mysql://"+dbName+"?user="+userName+"&password="+password;
+             conn = DriverManager.getConnection(strCon);
+             String SQLdelete = "delete from "+tableTfidf;
+             pDelete  =  conn.prepareStatement (SQLdelete);
+             pDelete.executeUpdate();
+         } catch (Exception e) {
+         	 e.printStackTrace();
+             logger.severe(e.toString()); 
+        }   
+        finally {
+            try {
+         	   pDelete.close();         	   
+               conn.close();
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, null, e);
+            }    
+        }
+    	 
+     }
 
      /**
       * Menghitung rawtfidf
@@ -106,8 +134,9 @@ public class TfidfDb {
       *
       */
  
-    public void process() {
-        Logger logger = Logger.getLogger("edu.cs.upi.TFIDF");
+    public void process(String filter) {
+    //filter untuk mengambil data, harus diawali dengan 'and'.
+    //contoh: "created_at_wib between "2013-02-9 13:00" and "2013-02-10 10:00" "
         logger.info("mulai");
         //loadExtStopWords(inputExtStopWords);
         Connection conn=null;       
@@ -130,7 +159,11 @@ public class TfidfDb {
             
             Integer freq;
             
-            pTw  =  conn.prepareStatement ("select id_internal,text_prepro from "+tableName+ " where is_prepro=1");
+            String SQLambilTw = "select id_internal,text_prepro from "+tableName+ " where is_prepro=1 "+filter;
+            
+            System.out.println(SQLambilTw);
+            
+            pTw  =  conn.prepareStatement (SQLambilTw);
             pInsertTfIdf =
                     conn.prepareStatement("insert into "+ tableTfidf + " (id_internal_tw_jadi,tfidf_val)"
                                         + "values (?,?) ");
@@ -230,6 +263,7 @@ public class TfidfDb {
            try {
         	   pInsertTfIdf.close();
                pTw.close();
+               conn.commit();
                conn.setAutoCommit(true);
                conn.close();
            } catch (Exception e) {
@@ -244,7 +278,6 @@ public class TfidfDb {
         //output: rata-rata bobot tfidf untuk semua kata yg terurut dari besar ke kecil
         //bisa digunakan untuk menentukan kata yang akan masuk ke stopwords
         */
-        Logger logger = Logger.getLogger("edu.cs.upi.TFIDF");
         String inputFileWoExt = inputTFIDFFile.substring(0, inputTFIDFFile.lastIndexOf('.')); //without ext
         String namaFileOutput = inputFileWoExt+"_tfidfStat.txt";
         try {
@@ -309,7 +342,7 @@ public class TfidfDb {
         t.password="rahasia";
         t.tableName="tw_jadi";
         t.tableTfidf="tfidf_2000";
-        t.process();
+        t.process("");
         //t.process("g:\\eksperimen\\data_weka\\tw_obama.txt","g:\\eksperimen\\data_weka\\stopwords.txt");
         //t.process("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn.txt","e:\\tweetmining\\catatan_stopwords_weight.txt");
         //t.stat("e:\\tweetmining\\corpus_0_1000_prepro_nots_preproSyn_tfidf.txt");

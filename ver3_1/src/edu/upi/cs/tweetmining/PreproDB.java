@@ -1,5 +1,4 @@
 /*
- *  Copyright (C) 2012 yudi wibisono (yudi1975@gmail.com/cs.upi.edu)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -39,7 +38,8 @@ import java.util.logging.Logger;
  *     casefolding, stopwords removal, url removal, mention removal
  *     
  *     tabel input minimal mengandung field: id_internal, text (tweetnya), text_prepro (output), is_prepro, is_duplicate_checeked, is_duplicate
- *               
+ *     
+ *     akan memproses record dengan field is_prepro=0
  *     
  *     input: 
  *     	tabel tw_jadi.text (gunakan ProsesTwMentahDB untuk mendapatkan tw_jadi dari tw_mentah)
@@ -51,6 +51,14 @@ import java.util.logging.Logger;
  *     
  *     def table untuk stopwords ada di bawah
  *     atau bisa dibuat dengan utility fileStopwordsToDB dan fileSinonimToDB
+ *     
+ *     
+ *     
+ *     	parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:
+    	-db databasename -u dbusername -p dbpassword -tablename namatabel -buangcharberurutan -flagduplicate yes_or_no -delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag
+    	Contoh:
+    	G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia  -tablename tw_jadi -buangcharberurutan -flagduplicate yes -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag
+    	
  *     
  */
 
@@ -76,6 +84,7 @@ public class PreproDB {
 	public boolean isBuangHashtag=false;
 	public boolean isProsesSinonim=false;
     public boolean isBuangStopwords=false;
+    public boolean isBuangCharBerurutan=false;
 	
 	public PreproDB() {
 		 Handler consoleHandler = new ConsoleHandler();
@@ -89,6 +98,14 @@ public class PreproDB {
 	  //melakukan pengecekan, kalau ada duplikasi maka tidak dimasukkan
 	
 	  //file teks berformat kata=sinonim	
+	  //struktur DB:
+//		CREATE TABLE IF NOT EXISTS `sinonim` (
+//				  `id_internal` bigint(20) NOT NULL AUTO_INCREMENT,
+//				  `kata` varchar(100) DEFAULT NULL,
+//				  `sinonim` varchar(100) DEFAULT NULL,
+//				  PRIMARY KEY (`id_internal`),
+//				  UNIQUE KEY `kata` (`kata`)
+//				)	
 	   System.out.println("filetodb");
        Connection conn=null;      
        PreparedStatement pSdhAda=null;        
@@ -237,7 +254,7 @@ public class PreproDB {
 	            	String kata = rs.getString(2).trim();
 	            	String sinonim = rs.getString(3).trim();
 	            	hmSinonim.put(kata,sinonim);
-	            	//System.out.println(kata+"="+sinonim);
+	            	System.out.println(kata+"="+sinonim);
 	            	jumDiproses++;
 	            }
 	        }
@@ -257,12 +274,14 @@ public class PreproDB {
 	
 	private String preproDasar(String strIn) {
 		//satu char dibuang, url, dan casefolding
-		//tergantung setting: buang hastag, mention, sinonim, prepro, 
+		//tergantung setting: buang hastag, mention, sinonim, prepro,
+		//url pasti dibuang
 		
 		String msg;
 		
 		msg = strIn.toLowerCase();                //casefolding
         
+		
 		
 		if (isBuangHashtag) {
         	msg = msg.replaceAll("#[\\w|:_]*", " ");  //buang #xxxx hashtag
@@ -271,11 +290,20 @@ public class PreproDB {
         	msg = msg.replaceAll("@[\\w|:_]*", " ");  //buang mention @xxxx
         }
         
+        //buang URL
         msg = msg.replaceAll("http://[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|]"," "); // buang url
+		
+        //giilaaa = gila
+        if (isBuangCharBerurutan) {
+			//System.out.println(msg);
+        	msg = msg.replaceAll("([.!?^\\w])\\1{1,}", "$1");
+        	//System.out.println("setelah "+ msg);
+		}
 		
         
         if ( (isProsesSinonim) || (isBuangStopwords) )  {
-	        Scanner sc = new Scanner(msg);
+	        //System.out.println("sinonoim:"+msg);
+        	Scanner sc = new Scanner(msg);
 	        StringBuilder sb = new StringBuilder();
 	        String w;
 	        String w2;
@@ -296,6 +324,9 @@ public class PreproDB {
 		            if (!alStopWords.contains(w)) {     //ada di stopwords? jangan dimasukkan
 		                sb.append(w).append(" ");
 		            }
+	            } else {
+	            	//masukan semua
+	            	sb.append(w).append(" ");
 	            }
 	        }               
 	        return sb.toString();
@@ -503,6 +534,10 @@ CREATE TABLE  `stopwords` (
     	boolean isBuangHashtag=false;
     	boolean isProsesSinonim=false;
     	boolean isBuangStopwords=false;
+    	boolean isBuangCharBerurutan=false; //giiilaaa = gila
+    	boolean isFlagDuplicate = true;
+    	
+    	
     	String strDelay="";
     	
     	String strParam;
@@ -560,26 +595,43 @@ CREATE TABLE  `stopwords` (
 					 strLast="isBuangHashtag";
 					 isBuangHashtag = true;  	    			
 				} else
+				if (arrDetPar[0].equals("flagduplicate")) {
+						 strLast="isFlagDuplicate";
+						 if (arrDetPar[1].equals("yes")) {
+							 isFlagDuplicate = true;
+						 } else 
+					     if (arrDetPar[1].equals("no")) {
+							 isFlagDuplicate = false;
+						 }  else {
+							 System.out.println("flagduplicate harus berisi yes or no ");
+						 }
+						   	    			
+				} else 
+				if (arrDetPar[0].equals("buangcharberurutan")) {
+						 strLast="isBuangCharBerurutan";
+						 isBuangCharBerurutan = true;  	    			
+				} else
 	    		{
 	    			//parameter tidak dikenal
 	    			System.out.println("Error parameter tdk dikenal : "+par);
+	    			System.exit(1);
 	    		}
     		}
     		catch (Exception e) {
     			System.out.println("parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:");
-    			System.out.println("-db databasename -u dbusername -p dbpassword -tablename namatabel -delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag");
+    			System.out.println("-db databasename -u dbusername -p dbpassword -tablename namatabel -buangcharberurutan -flagduplicate yes_or_no -delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag");
     			System.out.println("Contoh:");
-    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia  -tablename tw_jadi -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag");
+    			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia  -tablename tw_jadi -buangcharberurutan -flagduplicate yes -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag");
     			System.exit(1);
     		}
     	}
     	
     	if (strDb.equals("") || strDbUser.equals("") || strDbPass.equals("")) {
-    		System.out.println("parameter tidak lengkap db, dbuser dan dpass harus ada! Gunakan parameter dengan format:");
-    		System.out.println("-db databasename -u dbusername -p dbpassword -tablename namatabel g:-delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag");
+    		System.out.println("parameter salah pada bagian:" +strLast+" Gunakan parameter dengan format:");
+			System.out.println("-db databasename -u dbusername -p dbpassword -tablename namatabel -buangcharberurutan -flagduplicate yes_or_no -delay delay_antar_query_dlm_detik -buangmention -sinonim  -buangstopwords -buanghashtag");
 			System.out.println("Contoh:");
-			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia -tablename tw_jadi -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag");
-    		System.exit(1);
+			System.out.println("G:\\LibTweetMining2\\bin>java -classpath .;../libs/mysql-connector-java-5.0.8-bin.jar;../libs/jackson-all-1.9.9.jar edu.upi.cs.tweetmining.PreproDB -db localhost/obamarumor -u yudi3 -p rahasia  -tablename tw_jadi -buangcharberurutan -flagduplicate yes -delay 10 -buangmention -sinonim  -buangstopwords -buanghashtag");
+			System.exit(1);
     	}
     	
     	if (strDelay.equals("")) {
@@ -594,6 +646,7 @@ CREATE TABLE  `stopwords` (
     	System.out.println("buanghashtag-->"+isBuangHashtag);
     	System.out.println("buangstopwords-->"+isBuangStopwords);
     	System.out.println("proses sinonim-->"+isProsesSinonim);
+    	
 		
 		
     	//System.exit(1); //debug
@@ -608,14 +661,17 @@ CREATE TABLE  `stopwords` (
 		pdb.isBuangHashtag=isBuangHashtag;
 		pdb.isProsesSinonim=isProsesSinonim;
 		pdb.isBuangStopwords=isBuangStopwords;
+		pdb.isBuangCharBerurutan = isBuangCharBerurutan;
 		pdb.init();
 		int delay = Integer.parseInt(strDelay); //delay antar query dalam detik
 		for (int i=0;;i++) {
             System.out.println("Proses ke---------------------------------->"+i);
             pdb.proses();
             System.out.println("Jumlah diproses="+pdb.jumDiproses);
-            pdb.flagDuplicate();
-            System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
+            if (isFlagDuplicate) {
+            	pdb.flagDuplicate();
+            	System.out.println("Jumlah duplikasi="+pdb.jumDiproses);
+            }
             try {
             	System.out.println("Tidur:"+delay+" detik");
             	Thread.sleep(delay*1000);
